@@ -1,0 +1,128 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://deckspace.github.io/schemas/deck.schema.json",
+  "title": "Deckspace Deck File",
+  "description": "Defines a deck of cards with optional includes and set definitions",
+  "type": "object",
+  "required": ["name", "size", "cards"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Display name for this deck"
+    },
+    "back": {
+      "type": "string",
+      "format": "uri",
+      "description": "Default back image URL for all cards in this deck"
+    },
+    "size": {
+      "$ref": "#/definitions/cardSize"
+    },
+    "cards": {
+      "type": "array",
+      "description": "List of card definitions, deck includes, or set definitions",
+      "items": {
+        "oneOf": [
+          { "$ref": "#/definitions/cardDefinition" },
+          { "$ref": "#/definitions/deckInclude" },
+          { "$ref": "#/definitions/setDefinition" }
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "cardSize": {
+      "type": "object",
+      "description": "Card dimensions",
+      "required": ["width", "height"],
+      "properties": {
+        "width": { "type": "number", "minimum": 1 },
+        "height": { "type": "number", "minimum": 1 }
+      }
+    },
+    "cardDefinition": {
+      "type": "object",
+      "description": "A single card in the deck",
+      "required": ["face"],
+      "properties": {
+        "face": {
+          "type": "string",
+          "description": "URL or data URI for the card face image"
+        },
+        "back": {
+          "type": "string",
+          "description": "URL or data URI for this card's back image (overrides deck default)"
+        },
+        "tags": {
+          "type": "object",
+          "description": "Key-value metadata for filtering and sorting",
+          "additionalProperties": {
+            "oneOf": [
+              { "type": "string" },
+              { "type": "array", "items": { "type": "string" } }
+            ]
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "deckInclude": {
+      "type": "object",
+      "description": "Include another deck's cards into this deck",
+      "required": ["include"],
+      "properties": {
+        "include": {
+          "type": "string",
+          "description": "URL to another deck file, or a local deck name"
+        }
+      },
+      "additionalProperties": false
+    },
+    "setDefinition": {
+      "type": "object",
+      "description": "A named subset of cards from a source deck, used for dealing",
+      "required": ["name", "source"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Identifier for this set, referenced by setup files"
+        },
+        "source": {
+          "type": "string",
+          "description": "Name of the source deck to draw cards from"
+        },
+        "tags": {
+          "type": "object",
+          "description": "Filter: only include cards matching these tag values",
+          "additionalProperties": {
+            "oneOf": [
+              { "type": "string" },
+              { "type": "array", "items": { "type": "string" } }
+            ]
+          }
+        },
+        "exclude": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 0 },
+          "description": "Card indices to exclude (overrides tag filters)"
+        },
+        "include": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 0 },
+          "description": "Card indices to force-include (overrides tag filters)"
+        },
+        "sort": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Tag keys to sort by. If omitted, set is shuffled."
+        },
+        "take": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Number of cards to take from the filtered/sorted result"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

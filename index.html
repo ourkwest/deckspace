@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Deckspace</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0a1a; font-family: system-ui, sans-serif; color: #e0e0e0; touch-action: manipulation; }
+    #ui { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
+    #game { display: none; width: 100%; height: 100%; position: absolute; top: 0; left: 0; overflow: hidden; }
+    .screen { max-width: 400px; width: 90%; display: flex; flex-direction: column; gap: 16px; padding: 32px; }
+    .splash { align-items: center; text-align: center; }
+    .title { font-size: 2.5rem; letter-spacing: 0.15em; color: #4fc3f7; text-shadow: 0 0 20px rgba(79,195,247,0.4); }
+    .subtitle { color: #666; font-size: 1rem; margin-bottom: 16px; }
+    .menu { display: flex; flex-direction: column; gap: 12px; width: 100%; }
+    h2 { color: #4fc3f7; font-size: 1.4rem; }
+    label { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; color: #999; }
+    input[type="text"], input[type="url"] { background: #1a1a2e; border: 1px solid #333; border-radius: 4px; padding: 10px; color: #e0e0e0; font-size: 1rem; }
+    input[type="text"]:focus, input[type="url"]:focus { border-color: #4fc3f7; outline: none; }
+    select { background: #1a1a2e; border: 1px solid #333; border-radius: 4px; padding: 8px; color: #e0e0e0; font-size: 0.9rem; }
+    .session-id-input { display: flex; gap: 8px; }
+    .session-id-input select { flex: 1; }
+    button { background: #4fc3f7; color: #0a0a1a; border: none; border-radius: 4px; padding: 12px 20px; font-size: 1rem; font-weight: bold; cursor: pointer; transition: opacity 0.2s; }
+    button:disabled { opacity: 0.3; cursor: not-allowed; }
+    button:hover:not(:disabled) { opacity: 0.85; }
+    button.secondary { background: transparent; border: 1px solid #444; color: #999; }
+    .session-code { background: #1a1a2e; padding: 16px; border-radius: 8px; text-align: center; font-size: 1.3rem; font-weight: bold; color: #4fc3f7; letter-spacing: 0.05em; }
+    .players ul { list-style: none; padding: 0; }
+    .players li { padding: 6px 0; display: flex; align-items: center; gap: 8px; }
+    .dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+    .waiting { color: #666; font-style: italic; text-align: center; }
+    .error { color: #f44; font-size: 0.85rem; padding: 8px; background: rgba(255,68,68,0.1); border-radius: 4px; }
+    .url-history { font-size: 0.8rem; color: #666; }
+    .url-history a { color: #4fc3f7; text-decoration: none; cursor: pointer; }
+    .url-history a:hover { text-decoration: underline; }
+
+    /* Game board */
+    .board { display: flex; flex-direction: column; width: 100%; height: 100%; background: #0d1b0d; }
+    .board-table { flex: 1; position: relative; overflow: hidden; border-bottom: 1px solid #1a3a1a; background: radial-gradient(ellipse at center, #143014 0%, #0d1b0d 100%); }
+    .board-player { flex: 1; position: relative; overflow: hidden; background: #0a150a; }
+
+    /* Places */
+    .place { position: absolute; min-width: 50px; min-height: 70px; transform-origin: center center; cursor: pointer; transition: box-shadow 0.2s; }
+    .place:hover { box-shadow: 0 0 12px rgba(79,195,247,0.3); }
+    .place-empty { width: 50px; height: 70px; border: 2px dashed #2a4a2a; border-radius: 4px; }
+    .place-label { position: absolute; bottom: -18px; left: 50%; transform: translateX(-50%); font-size: 0.65rem; color: #6a9a6a; white-space: nowrap; opacity: 0; transition: opacity 0.2s; }
+    .place:hover .place-label, .place.zoomed .place-label { opacity: 1; }
+
+    /* Cards */
+    .card { position: absolute; width: 50px; height: 70px; border-radius: 4px; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; transform-origin: center center; }
+    .card:hover { z-index: 10; }
+    .card.selected { box-shadow: 0 0 0 3px #4fc3f7, 0 0 12px rgba(79,195,247,0.5); z-index: 11; }
+    .card img { width: 100%; height: 100%; object-fit: contain; border-radius: 4px; pointer-events: none; }
+
+    /* Card fallback */
+    .card-fallback { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: white; border: 1px solid #ccc; border-radius: 4px; font-size: 0.6rem; color: #333; text-align: center; padding: 4px; word-break: break-word; }
+
+    /* Default card back */
+    .card-default-back { width: 100%; height: 100%; border-radius: 4px; background: #1a237e; background-image: repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(255,255,255,0.05) 3px, rgba(255,255,255,0.05) 6px), repeating-linear-gradient(-45deg, transparent, transparent 3px, rgba(255,255,255,0.05) 3px, rgba(255,255,255,0.05) 6px); border: 2px solid #283593; }
+
+    /* Action bar */
+    .action-bar { position: fixed; bottom: 0; left: 0; right: 0; display: flex; align-items: center; gap: 8px; padding: 12px 16px; background: rgba(10,10,26,0.95); border-top: 1px solid #333; z-index: 100; overflow-x: auto; }
+    .action-bar.selecting { justify-content: center; }
+    .action-hint { color: #4fc3f7; font-size: 0.9rem; }
+    .action-btn { padding: 8px 14px; font-size: 0.85rem; border-radius: 4px; background: #222; color: #ccc; border: 1px solid #444; cursor: pointer; white-space: nowrap; }
+    .action-btn:hover { background: #333; }
+    .action-btn.primary { background: #4fc3f7; color: #0a0a1a; border-color: #4fc3f7; font-weight: bold; }
+
+    /* Zoomed view */
+    .board.zoomed .board-table, .board.zoomed .board-player { display: none; }
+    .board-zoomed { position: absolute; top: 0; left: 0; right: 0; bottom: 60px; overflow: auto; padding: 20px; display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: center; gap: 8px; }
+    .board-zoomed .place-name { width: 100%; text-align: center; color: #4fc3f7; font-size: 1rem; margin-bottom: 12px; }
+    .board-zoomed .card { position: relative; width: 70px; height: 98px; flex-shrink: 0; }
+    .board-zoomed .card img { width: 100%; height: 100%; }
+  </style>
+</head>
+<body>
+  <div id="ui"></div>
+  <div id="game"></div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

@@ -66,6 +66,9 @@ setup:
         - x, y (will be displayed relative to player)
         - rotation (relative to the player it belongs to)
       - possible card limit
+      - arrangement
+        - spread distance (x,y) per card
+        - spread angle per card
       - default flip
       - starting card set name
       - clone limit
@@ -80,6 +83,9 @@ setup:
         - x, y (will be displayed relative to player)
         - rotation (relative to the player viewing it)
       - possible card limit
+      - arrangement
+        - spread distance (x,y) per card
+        - spread angle per card
       - default flip
       - starting card set name
       - clone limit

@@ -1,0 +1,145 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://deckspace.github.io/schemas/setup.schema.json",
+  "title": "Deckspace Setup File",
+  "description": "Defines the layout and rules for a card game session",
+  "type": "object",
+  "required": ["name", "deck", "players"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Display name for this game setup"
+    },
+    "deck": {
+      "type": "string",
+      "description": "URL to the deck file to use"
+    },
+    "players": {
+      "type": "object",
+      "required": ["min", "max"],
+      "properties": {
+        "min": { "type": "integer", "minimum": 1 },
+        "max": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "globalPlaces": {
+      "type": "array",
+      "description": "Places shared by all players",
+      "items": { "$ref": "#/definitions/globalPlace" }
+    },
+    "playerPlaces": {
+      "type": "array",
+      "description": "Places instantiated per player",
+      "items": { "$ref": "#/definitions/playerPlace" }
+    },
+    "subPlaces": {
+      "type": "array",
+      "description": "Sub-place templates that can be attached to places",
+      "items": { "$ref": "#/definitions/subPlace" }
+    }
+  },
+  "definitions": {
+    "location": {
+      "type": "object",
+      "properties": {
+        "x": { "type": "number", "default": 0 },
+        "y": { "type": "number", "default": 0 },
+        "rotation": { "type": "number", "default": 0, "description": "Rotation in degrees" }
+      }
+    },
+    "arrangement": {
+      "type": "object",
+      "description": "How cards are spread out within the place",
+      "properties": {
+        "spreadX": { "type": "number", "default": 0, "description": "Horizontal offset per card" },
+        "spreadY": { "type": "number", "default": 0, "description": "Vertical offset per card" },
+        "spreadAngle": { "type": "number", "default": 0, "description": "Rotation offset per card in degrees" }
+      }
+    },
+    "flip": {
+      "type": "string",
+      "enum": ["faceUp", "faceDown", "topFaceUp"],
+      "default": "faceDown"
+    },
+    "arrivalLocation": {
+      "type": "string",
+      "enum": ["top", "bottom", "ask"],
+      "default": "top"
+    },
+    "arrivalFlip": {
+      "type": "string",
+      "enum": ["faceUp", "faceDown", "ask", "asIs"],
+      "default": "asIs"
+    },
+    "subPlaceSpec": {
+      "type": "object",
+      "description": "Defines how many sub-places of a given type can exist",
+      "properties": {
+        "initial": { "type": "integer", "minimum": 0, "default": 1 },
+        "min": { "type": "integer", "minimum": 0, "default": 0 },
+        "max": { "type": "integer", "minimum": 1, "default": 1 }
+      }
+    },
+    "placeBase": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string", "description": "Display name for this place" },
+        "location": { "$ref": "#/definitions/location" },
+        "cardLimit": { "type": "integer", "minimum": 1, "description": "Max cards this place can hold" },
+        "arrangement": { "$ref": "#/definitions/arrangement" },
+        "defaultFlip": { "$ref": "#/definitions/flip" },
+        "startingSet": { "type": "string", "description": "Name of a set in the deck to start with" },
+        "cloneLimit": { "type": "integer", "minimum": 1, "default": 1, "description": "Max copies of this place (1 = no cloning)" },
+        "subPlaces": {
+          "type": "object",
+          "description": "Map of sub-place template name to spawn spec",
+          "additionalProperties": { "$ref": "#/definitions/subPlaceSpec" }
+        },
+        "arrivalLocation": { "$ref": "#/definitions/arrivalLocation" },
+        "arrivalFlip": { "$ref": "#/definitions/arrivalFlip" },
+        "shuffleOnArrival": { "type": "boolean", "default": false, "description": "Shuffle the place's cards whenever cards arrive" }
+      }
+    },
+    "globalPlace": {
+      "allOf": [
+        { "$ref": "#/definitions/placeBase" },
+        {
+          "type": "object",
+          "properties": {
+            "othersCanMoveIn": { "type": "boolean", "default": true },
+            "othersCanMoveOut": { "type": "boolean", "default": true }
+          }
+        }
+      ]
+    },
+    "playerPlace": {
+      "allOf": [
+        { "$ref": "#/definitions/placeBase" },
+        {
+          "type": "object",
+          "properties": {
+            "visibleToOtherPlayers": { "type": "boolean", "default": false, "description": "Whether other players can see this place's cards" },
+            "othersCanMoveIn": { "type": "boolean", "default": false },
+            "othersCanMoveOut": { "type": "boolean", "default": false }
+          }
+        }
+      ]
+    },
+    "subPlace": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string", "description": "Template name, referenced by parent places" },
+        "location": { "$ref": "#/definitions/location" },
+        "cardLimit": { "type": "integer", "minimum": 1 },
+        "arrangement": { "$ref": "#/definitions/arrangement" },
+        "defaultFlip": { "$ref": "#/definitions/flip" },
+        "startingSet": { "type": "string" },
+        "arrivalLocation": { "$ref": "#/definitions/arrivalLocation" },
+        "arrivalFlip": { "$ref": "#/definitions/arrivalFlip" },
+        "shuffleOnArrival": { "type": "boolean", "default": false }
+      }
+    }
+  }
+}
