@@ -29,15 +29,22 @@
 
 ## Interaction Model
 
-Touch/mobile-first. Desktop also works (click instead of tap).
+Touch/mobile-first. Desktop also works (click instead of tap, long-click instead of tap-and-hold).
+
+**The "Hand" metaphor:**
+
+The board overview is always visible — there is no zoomed/detail mode. Players interact by picking up cards into a transient "hand" strip at the bottom of the screen, then depositing them somewhere.
 
 **Actions:**
-- Tap a place → zoom in to see cards in detail
-- Tap a card (when zoomed) → select it, show action menu: move / flip
-- Move → shows eligible destination places → tap destination → resolve arrival (top/bottom, face up/down) based on place rules or prompt if "ask"
-- Pinch/drag to pan the overview
+- Tap a card in any place → pick up that card + all cards above it into your hand (removed from source immediately)
+- Tap a card in your hand → flip it (face-up ↔ face-down)
+- Tap-and-hold a card in your hand → inspect it fullscreen; tap to exit
+- Tap-and-hold any place → deposit all hand cards into that place (arrival rules apply)
+- Cancel button (in hand strip) → return all hand cards to their source
 
-**No drag-and-drop** for moving cards between places (unreliable on mobile, especially between distant places). Tap-to-select then tap-destination is more reliable.
+**No drag-and-drop** for moving cards between places (unreliable on mobile, especially between distant places). The hand metaphor achieves the same result with reliable tap/hold gestures.
+
+**No zoom mode** — the overview layout plus the hand strip provides enough information. Card faces are readable at overview scale; for detailed inspection, tap-and-hold shows fullscreen.
 
 ## State Model
 

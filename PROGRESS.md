@@ -83,4 +83,47 @@ npm run build  # production build to dist/
 ## TODO:
 
 Need to handle dynamic resizing on desktop? - maybe not actually - it is mobile first!
-Need to think more about UX
+
+## UX Redesign — "Hand" Concept
+
+Replacing the previous zoom-select-move flow with a simpler physical metaphor:
+
+### Overview (the only view — no zoom mode)
+
+All places are always visible on screen. Interaction is:
+
+1. **Tap a card** in any place → that card + all cards on top of it move to your **hand** (a strip along the bottom of the screen). Cards are visibly removed from the source place. Order is retained.
+2. **Hand strip** shows held cards fanned out horizontally (x-offset only, no rotation). Evenly spaced to fit the screen width.
+3. **Tap a card in your hand** → flip it (face-up ↔ face-down).
+4. **Tap-and-hold a card in your hand** → inspect it fullscreen. Tap anywhere to exit.
+5. **Tap-and-hold any place** → deposit ALL hand cards into that place (arrival rules apply: position, flip, shuffle).
+6. **Cancel button** (corner of hand strip) → return all cards to their source place in original position.
+
+### Benefits over previous zoom/select/move flow
+
+- No mode switching — always in the overview
+- Better spatial awareness — you can see the whole board while deciding where to put cards
+- Fewer taps for common operations
+- Physical metaphor: pick up → put down
+- Simpler code: only two states (hand empty, hand holding cards)
+
+### "Ask" prompts
+
+If a destination place has `arrivalLocation: "ask"` or `arrivalFlip: "ask"`, the prompt dialog appears after the tap-hold deposit gesture.
+
+### Permissions
+
+- Picking up: only from places where the player has move-out access
+- Depositing: only places where the player has move-in access respond to tap-hold
+- Places that don't allow the action simply don't respond to the gesture
+
+### Multiplayer visibility
+
+- The hand is a client-side "in transit" zone — cards are immediately removed from the source place on the host state (so other players can't take them simultaneously)
+- Other players see the cards disappear from the source but don't see what's in your hand
+
+### Future considerations (deferred)
+
+- Rotation/flip states (e.g. tapped cards in MTG): more than just faceUp/faceDown
+- Splitting the hand: returning only some cards (for now, cancel returns all)
+

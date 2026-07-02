@@ -249,11 +249,30 @@ function renderPlace(place, deckInfo, seatRotation, callbacks, cardScale = 1) {
   label.textContent = place.id.split(':').pop();
   el.appendChild(label);
 
-  // Tap handler for place
+  // Tap handler for place (no-op in new UX, but kept for flexibility)
   el.addEventListener('click', (e) => {
-    if (e.target.closest('.card')) return; // Let card clicks bubble separately
+    if (e.target.closest('.card')) return;
     callbacks.onPlaceTap?.(place.id);
   });
+
+  // Long-press handler for depositing cards
+  if (callbacks.onPlaceLongPress) {
+    let lpTimer = null;
+    let lpTriggered = false;
+    el.addEventListener('pointerdown', (e) => {
+      if (e.target.closest('.card')) return;
+      lpTriggered = false;
+      lpTimer = setTimeout(() => {
+        lpTriggered = true;
+        callbacks.onPlaceLongPress(place.id);
+      }, 500);
+    });
+    el.addEventListener('pointerup', () => { clearTimeout(lpTimer); });
+    el.addEventListener('pointerleave', () => { clearTimeout(lpTimer); });
+    el.addEventListener('click', (e) => {
+      if (lpTriggered) { e.preventDefault(); e.stopPropagation(); lpTriggered = false; }
+    }, true);
+  }
 
   return el;
 }

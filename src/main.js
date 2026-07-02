@@ -4,7 +4,7 @@ import { createNavigation } from './navigation.js';
 import { createGameState, moveCards, flipCards, clonePlace, canPlayerAccess, computeChecksum } from './state.js';
 import { computePlayerView, serializeView, computeViewDelta, applyViewDelta } from './view.js';
 import { createBoard, renderBoard } from './board.js';
-import { createInteraction, renderActionBar, bindActionBar } from './interaction.js';
+import { createInteraction, addLongPress } from './interaction.js';
 
 const ui = document.getElementById('ui');
 const game = document.getElementById('game');
@@ -21,10 +21,39 @@ let localView = null; // Serialized view for local display
 let boardLayout = null;
 let interaction = null;
 
+// --- Host action handler ---
+
 function handleAction(peerId, action) {
   if (!gameState || !isHost) return;
 
-  if (action.type === 'move') {
+  if (action.type === 'pickup') {
+    // Move cards from source to a virtual hand place
+    const fromPlace = gameState.places.get(action.from);
+    if (!fromPlace) return;
+    if (!canPlayerAccess(fromPlace, peerId, 'out')) return;
+
+    // Create or get the hand place for this player
+    const handId = `__hand__:${peerId}`;
+    if (!gameState.places.has(handId)) {
+      gameState.places.set(handId, { id: handId, cards: [], config: { owner: peerId } });
+    }
+
+    const delta = moveCards(gameState, action.cardIds, action.from, handId, 'top', 'asIs');
+    if (delta) broadcastState();
+
+  } else if (action.type === 'deposit') {
+    const toPlace = gameState.places.get(action.to);
+    if (!toPlace) return;
+    if (!canPlayerAccess(toPlace, peerId, 'in')) return;
+
+    const handId = `__hand__:${peerId}`;
+    const handPlace = gameState.places.get(handId);
+    if (!handPlace) return;
+
+    const delta = moveCards(gameState, action.cardIds, handId, action.to, action.position, action.flip);
+    if (delta) broadcastState();
+
+  } else if (action.type === 'move') {
     const fromPlace = gameState.places.get(action.from);
     const toPlace = gameState.places.get(action.to);
     if (!fromPlace || !toPlace) return;
@@ -33,14 +62,17 @@ function handleAction(peerId, action) {
 
     const delta = moveCards(gameState, action.cardIds, action.from, action.to, action.position, action.flip);
     if (delta) broadcastState();
-  } else if (action.type === 'flip') {
-    const place = gameState.places.get(action.placeId);
-    if (!place) return;
-    // For flip, allow if player can access the place at all
-    if (!canPlayerAccess(place, peerId, 'out')) return;
 
-    const delta = flipCards(gameState, action.cardIds, action.placeId, action.faceUp);
+  } else if (action.type === 'flip') {
+    // For hand flips, use the hand place
+    let placeId = action.placeId;
+    if (placeId === '__hand__') placeId = `__hand__:${peerId}`;
+    const place = gameState.places.get(placeId);
+    if (!place) return;
+
+    const delta = flipCards(gameState, action.cardIds, placeId, action.faceUp);
     if (delta) broadcastState();
+
   } else if (action.type === 'clone') {
     const delta = clonePlace(gameState, action.placeId);
     if (delta) broadcastState();
@@ -49,7 +81,6 @@ function handleAction(peerId, action) {
 
 function sendAction(action) {
   if (isHost) {
-    // Apply locally
     handleAction(localPlayerId, action);
     updateLocalView();
     renderGame();
@@ -58,14 +89,14 @@ function sendAction(action) {
   }
 }
 
+// --- Network state management ---
+
 function broadcastState() {
   if (!network || !isHost) return;
 
-  // Update local view
   updateLocalView();
   renderGame();
 
-  // Send personalized views to each guest
   for (const peerId of allPlayerIds) {
     if (peerId === 'host') continue;
 
@@ -96,6 +127,8 @@ function updateLocalView() {
   }
 }
 
+// --- Game lifecycle ---
+
 function startGame(net, sessionState, initData) {
   network = net;
   isHost = initData.isHost ?? false;
@@ -111,12 +144,10 @@ function startGame(net, sessionState, initData) {
     localPlayerId = 'host';
     gameState = createGameState(initData.setup, deck, allPlayerIds);
 
-    // Send initial full state to each guest
     for (const peerId of allPlayerIds) {
       if (peerId === 'host') continue;
       const view = computePlayerView(gameState, peerId, deck);
       const serialized = serializeView(view, gameState.version);
-      // Attach configs
       for (const [id, place] of gameState.places) {
         if (serialized.places[id]) {
           serialized.places[id].config = place.config;
@@ -152,17 +183,12 @@ function onDelta(data) {
 function onPlayerReconnect(newPeerId, oldPeerId) {
   if (!gameState || !isHost || !network) return;
 
-  // Update player ID in our tracking
   const oldView = playerViews.get(oldPeerId);
-  if (oldView) {
-    playerViews.delete(oldPeerId);
-  }
+  if (oldView) playerViews.delete(oldPeerId);
 
-  // Update allPlayerIds
   const idx = allPlayerIds.indexOf(oldPeerId);
   if (idx !== -1) allPlayerIds[idx] = newPeerId;
 
-  // Send full state to reconnected player
   const view = computePlayerView(gameState, newPeerId, deck);
   const serialized = serializeView(view, gameState.version);
   for (const [id, place] of gameState.places) {
@@ -173,6 +199,8 @@ function onPlayerReconnect(newPeerId, oldPeerId) {
   network.sendToPlayer(newPeerId, { type: 'state', ...serialized });
   playerViews.set(newPeerId, serialized);
 }
+
+// --- Board and rendering ---
 
 function initBoard() {
   boardLayout = createBoard(game);
@@ -190,89 +218,85 @@ function renderGame() {
 
   const interactionState = interaction.getState();
 
-  if (interactionState.mode === 'zoomed' || interactionState.mode === 'selecting-destination') {
-    renderZoomedView();
+  // Always render the overview (no zoom mode)
+  renderOverview();
+
+  // Render the hand strip
+  renderHandStrip(interactionState);
+
+  // Render fullscreen inspect if active
+  if (interactionState.inspecting) {
+    renderInspect(interactionState.inspecting);
   } else {
-    renderOverview();
+    removeInspect();
   }
 }
 
 function renderOverview() {
-  // Remove zoomed view if present
-  const existingZoom = game.querySelector('.board-zoomed');
-  if (existingZoom) existingZoom.remove();
-  const existingBar = game.querySelector('.action-bar');
-  if (existingBar) existingBar.remove();
-
   game.classList.remove('zoomed');
   boardLayout.tableArea.style.display = '';
   boardLayout.playerArea.style.display = '';
 
-  renderBoard(boardLayout, localView, localPlayerId, allPlayerIds, deckInfo, {
-    onPlaceTap: (placeId) => interaction.onPlaceTap(placeId),
+  // Remove any old zoomed elements
+  const existingZoom = game.querySelector('.board-zoomed');
+  if (existingZoom) existingZoom.remove();
+  const existingBar = game.querySelector('.action-bar-container');
+  if (existingBar) existingBar.remove();
+
+  // Filter out hand places from the view
+  const filteredView = { ...localView, places: {} };
+  for (const [id, place] of Object.entries(localView.places || {})) {
+    if (!id.startsWith('__hand__')) {
+      filteredView.places[id] = place;
+    }
+  }
+
+  renderBoard(boardLayout, filteredView, localPlayerId, allPlayerIds, deckInfo, {
+    onPlaceTap: () => {}, // No action on place tap in overview
     onCardTap: (cardId, placeId) => interaction.onCardTap(cardId, placeId),
+    onPlaceLongPress: (placeId) => interaction.onPlaceLongPress(placeId),
   });
 }
 
-function renderZoomedView() {
-  const interactionState = interaction.getState();
-  const placeId = interactionState.zoomedPlaceId;
-  const placeData = localView.places?.[placeId];
+function renderHandStrip(interactionState) {
+  let strip = game.querySelector('.hand-strip');
+  if (!strip) {
+    strip = document.createElement('div');
+    strip.className = 'hand-strip';
+    game.appendChild(strip);
+  }
 
-  if (!placeData) {
-    interaction.cancelAction();
+  if (interactionState.hand.length === 0) {
+    strip.classList.remove('visible');
+    strip.innerHTML = '';
     return;
   }
 
-  // Hide overview
-  boardLayout.tableArea.style.display = 'none';
-  boardLayout.playerArea.style.display = 'none';
-  game.classList.add('zoomed');
+  strip.classList.add('visible');
+  strip.innerHTML = '';
 
-  // Remove existing zoom elements
-  let zoomContainer = game.querySelector('.board-zoomed');
-  if (!zoomContainer) {
-    zoomContainer = document.createElement('div');
-    zoomContainer.className = 'board-zoomed';
-    game.appendChild(zoomContainer);
-  }
+  // Cancel button
+  const cancelBtn = document.createElement('button');
+  cancelBtn.className = 'hand-cancel';
+  cancelBtn.textContent = '↩';
+  cancelBtn.title = 'Return cards';
+  cancelBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    interaction.cancel();
+  });
+  strip.appendChild(cancelBtn);
 
-  // If selecting destination, show all places as targets
-  if (interactionState.mode === 'selecting-destination') {
-    renderDestinationPicker(zoomContainer);
-  } else {
-    renderZoomedPlace(zoomContainer, placeId, placeData, interactionState);
-  }
+  // Render hand cards fanned out
+  const cards = interactionState.hand;
+  const maxWidth = strip.clientWidth - 60; // leave room for cancel button
+  const cardWidth = 50; // base card width at scale
+  const spacing = Math.min(cardWidth * 0.8, maxWidth / Math.max(cards.length, 1));
 
-  // Render action bar
-  let barContainer = game.querySelector('.action-bar-container');
-  if (!barContainer) {
-    barContainer = document.createElement('div');
-    barContainer.className = 'action-bar-container';
-    game.appendChild(barContainer);
-  }
-  barContainer.innerHTML = renderActionBar(interactionState, interaction);
-  bindActionBar(barContainer, interaction);
-}
-
-function renderZoomedPlace(container, placeId, placeData, interactionState) {
-  container.innerHTML = '';
-
-  // Place name
-  const name = document.createElement('div');
-  name.className = 'place-name';
-  name.textContent = placeId.split(':').pop();
-  container.appendChild(name);
-
-  // Render each card as selectable
-  const cards = placeData.cards || [];
-  for (const card of cards) {
+  for (let i = 0; i < cards.length; i++) {
+    const card = cards[i];
     const el = document.createElement('div');
-    el.className = 'card' + (card.faceUp ? ' face-up' : ' face-down');
-    if (interactionState.selectedCardIds.has(card.id)) {
-      el.classList.add('selected');
-    }
-    el.dataset.cardId = card.id;
+    el.className = 'card hand-card' + (card.faceUp ? ' face-up' : ' face-down');
+    el.style.left = `${60 + i * spacing}px`;
 
     if (card.faceUp && card.deckIndex !== null) {
       const cardData = deckInfo?.cards?.[card.deckIndex];
@@ -282,10 +306,6 @@ function renderZoomedPlace(container, placeId, placeData, interactionState) {
         img.src = cardData.face;
         img.loading = 'lazy';
         img.alt = getCardAlt(cardData);
-        img.onerror = () => {
-          img.style.display = 'none';
-          el.appendChild(createFallback(cardData));
-        };
         el.appendChild(img);
       } else {
         el.appendChild(createFallback(cardData));
@@ -299,80 +319,68 @@ function renderZoomedPlace(container, placeId, placeData, interactionState) {
         img.loading = 'lazy';
         el.appendChild(img);
       } else {
-        const back = document.createElement('div');
-        back.className = 'card-default-back';
-        el.appendChild(back);
+        el.appendChild(createDefaultBack());
       }
     }
 
-    el.addEventListener('click', () => interaction.onCardTap(card.id, placeId));
-    container.appendChild(el);
-  }
+    // Tap to flip
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      interaction.onCardTap(card.id, '__hand__');
+    });
 
-  if (cards.length === 0) {
-    const empty = document.createElement('div');
-    empty.className = 'place-empty';
-    empty.style.margin = '20px auto';
-    empty.textContent = 'Empty';
-    empty.style.display = 'flex';
-    empty.style.alignItems = 'center';
-    empty.style.justifyContent = 'center';
-    empty.style.color = '#4a7a4a';
-    container.appendChild(empty);
+    // Long-press to inspect
+    addLongPress(el, () => interaction.onHandCardLongPress(card.id));
+
+    strip.appendChild(el);
   }
 }
 
-function renderDestinationPicker(container) {
-  container.innerHTML = '';
-  container.style.position = 'relative';
-  container.style.display = 'block';
-  container.style.overflow = 'hidden';
+function renderInspect(cardId) {
+  let overlay = game.querySelector('.inspect-overlay');
+  if (overlay && overlay.dataset.cardId === cardId) return; // already showing
 
-  const title = document.createElement('div');
-  title.className = 'place-name';
-  title.textContent = 'Tap a destination';
-  title.style.position = 'absolute';
-  title.style.top = '8px';
-  title.style.left = '0';
-  title.style.right = '0';
-  title.style.zIndex = '10';
-  container.appendChild(title);
+  removeInspect();
+  const interactionState = interaction.getState();
+  const card = interactionState.hand.find(c => c.id === cardId);
+  if (!card) return;
 
-  const board = document.createElement('div');
-  board.className = 'dest-board';
-  container.appendChild(board);
+  overlay = document.createElement('div');
+  overlay.className = 'inspect-overlay';
+  overlay.dataset.cardId = cardId;
 
-  const currentPlaceId = interaction.getState().zoomedPlaceId;
+  const cardEl = document.createElement('div');
+  cardEl.className = 'inspect-card';
 
-  // Separate places into table (global + others) and player (own)
-  const containerHeight = container.clientHeight || window.innerHeight - 60;
-  const containerWidth = container.clientWidth || window.innerWidth;
-
-  for (const [id, placeData] of Object.entries(localView.places || {})) {
-    if (id === currentPlaceId) continue;
-
-    const config = placeData.config || {};
-    const loc = config.location || { x: 50, y: 50 };
-    const cardCount = placeData.cards?.length || 0;
-    const placeName = id.split(':').pop();
-
-    const btn = document.createElement('div');
-    btn.className = 'dest-place-btn';
-
-    // Position based on whether it's a player place or global/other
-    let yOffset = 0;
-    if (id.startsWith('player:') && id.includes(`:${localPlayerId}:`)) {
-      // Own player place: bottom half
-      yOffset = 50;
+  if (card.faceUp && card.deckIndex !== null) {
+    const cardData = deckInfo?.cards?.[card.deckIndex];
+    if (cardData?.face) {
+      const img = document.createElement('img');
+      img.src = cardData.face;
+      img.alt = getCardAlt(cardData);
+      cardEl.appendChild(img);
+    } else {
+      cardEl.appendChild(createFallback(cardData));
     }
-    btn.style.left = `${loc.x}%`;
-    btn.style.top = `${yOffset + loc.y * 0.5}%`;
-
-    btn.innerHTML = `<span class="dest-name">${escHtml(placeName)}</span><span class="dest-count">${cardCount}</span>`;
-
-    btn.addEventListener('click', () => interaction.onPlaceTap(id));
-    board.appendChild(btn);
+  } else {
+    const backUrl = getCardBack(card);
+    if (backUrl) {
+      const img = document.createElement('img');
+      img.src = backUrl;
+      cardEl.appendChild(img);
+    } else {
+      cardEl.appendChild(createDefaultBack());
+    }
   }
+
+  overlay.appendChild(cardEl);
+  overlay.addEventListener('click', () => interaction.dismissInspect());
+  game.appendChild(overlay);
+}
+
+function removeInspect() {
+  const overlay = game.querySelector('.inspect-overlay');
+  if (overlay) overlay.remove();
 }
 
 // --- Utilities ---
@@ -399,15 +407,17 @@ function createFallback(cardData) {
   return el;
 }
 
+function createDefaultBack() {
+  const el = document.createElement('div');
+  el.className = 'card-default-back';
+  return el;
+}
+
 function getCardBack(card) {
   if (card.deckIndex !== null && deckInfo?.cards?.[card.deckIndex]?.back) {
     return deckInfo.cards[card.deckIndex].back;
   }
   return deckInfo?.back || null;
-}
-
-function escHtml(s) {
-  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 }
 
 // --- Bootstrap ---
