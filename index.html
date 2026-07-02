@@ -43,11 +43,11 @@
     /* Places */
     .place { position: absolute; min-width: 50px; min-height: 70px; transform-origin: center center; cursor: pointer; transition: box-shadow 0.2s; }
     .place:hover { box-shadow: 0 0 12px rgba(79,195,247,0.3); }
-    .place-empty { width: 50px; height: 70px; border: 2px dashed #2a4a2a; border-radius: 4px; }
+    .place-empty { width: 50px; height: 70px; border: 2px dashed #4a8a4a; border-radius: 4px; background: rgba(255,255,255,0.03); }
 
     /* Cards */
-    .card { position: absolute; width: 50px; height: 70px; border-radius: 4px; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; transform-origin: center center; }
-    .card:hover { z-index: 10; }
+    .card { position: absolute; width: 50px; height: 70px; border-radius: 4px; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; transform-origin: center center; box-shadow: 0 1px 3px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.15); }
+    .card:hover { z-index: 10; box-shadow: 0 2px 6px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.25); }
     .card.selected { box-shadow: 0 0 0 3px #4fc3f7, 0 0 12px rgba(79,195,247,0.5); z-index: 11; }
     .card img { width: 100%; height: 100%; object-fit: contain; border-radius: 4px; pointer-events: none; }
 
@@ -55,7 +55,7 @@
     .card-fallback { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: white; border: 1px solid #ccc; border-radius: 4px; font-size: 0.6rem; color: #333; text-align: center; padding: 4px; word-break: break-word; }
 
     /* Default card back */
-    .card-default-back { width: 100%; height: 100%; border-radius: 4px; background: #1a237e; background-image: repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(255,255,255,0.05) 3px, rgba(255,255,255,0.05) 6px), repeating-linear-gradient(-45deg, transparent, transparent 3px, rgba(255,255,255,0.05) 3px, rgba(255,255,255,0.05) 6px); border: 2px solid #283593; }
+    .card-default-back { width: 100%; height: 100%; border-radius: 4px; background: #1a237e; background-image: repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(255,255,255,0.08) 3px, rgba(255,255,255,0.08) 6px), repeating-linear-gradient(-45deg, transparent, transparent 3px, rgba(255,255,255,0.08) 3px, rgba(255,255,255,0.08) 6px); border: 2px solid #5c6bc0; }
 
     /* Action bar */
     .action-bar { position: fixed; bottom: 0; left: 0; right: 0; display: flex; align-items: center; gap: 8px; padding: 12px 16px; background: rgba(10,10,26,0.95); border-top: 1px solid #333; z-index: 100; overflow-x: auto; }
