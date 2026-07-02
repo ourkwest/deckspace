@@ -42,12 +42,14 @@ export function createGameState(setup, deck, playerIds) {
     return { id, deckIndex, faceUp: false };
   }
 
-  function dealSet(setName) {
+  function dealSet(setName, count) {
     const set = deck.sets.get(setName);
     if (!set) return [];
-    return set.cardIndices
-      .filter(i => !dealtCards.has(i))
-      .map(i => makeCard(i));
+    let available = set.cardIndices.filter(i => !dealtCards.has(i));
+    if (count != null && count < available.length) {
+      available = available.slice(0, count);
+    }
+    return available.map(i => makeCard(i));
   }
 
   function applyDefaultFlip(cards, defaultFlip) {
@@ -84,7 +86,7 @@ export function createGameState(setup, deck, playerIds) {
     const config = { ...placeDef, ...placeDefaults(placeDef), othersCanMoveIn: placeDef.othersCanMoveIn ?? true, othersCanMoveOut: placeDef.othersCanMoveOut ?? true };
     let cards = [];
     if (placeDef.startingSet) {
-      cards = dealSet(placeDef.startingSet);
+      cards = dealSet(placeDef.startingSet, placeDef.startingCount);
       applyDefaultFlip(cards, config.defaultFlip);
     }
     places.set(id, { id, cards, config });
@@ -97,7 +99,7 @@ export function createGameState(setup, deck, playerIds) {
       const config = { ...placeDef, ...placeDefaults(placeDef), owner: playerId, othersCanMoveIn: placeDef.othersCanMoveIn ?? false, othersCanMoveOut: placeDef.othersCanMoveOut ?? false, visibleToOtherPlayers: placeDef.visibleToOtherPlayers ?? false };
       let cards = [];
       if (placeDef.startingSet) {
-        cards = dealSet(placeDef.startingSet);
+        cards = dealSet(placeDef.startingSet, placeDef.startingCount);
         applyDefaultFlip(cards, config.defaultFlip);
       }
       places.set(id, { id, cards, config });

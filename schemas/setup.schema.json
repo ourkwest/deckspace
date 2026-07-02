@@ -90,6 +90,7 @@
         "arrangement": { "$ref": "#/definitions/arrangement" },
         "defaultFlip": { "$ref": "#/definitions/flip" },
         "startingSet": { "type": "string", "description": "Name of a set in the deck to start with" },
+        "startingCount": { "type": "integer", "minimum": 1, "description": "How many cards to take from startingSet (omit to take all remaining)" },
         "cloneLimit": { "type": "integer", "minimum": 1, "default": 1, "description": "Max copies of this place (1 = no cloning)" },
         "subPlaces": {
           "type": "object",

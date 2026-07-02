@@ -298,7 +298,12 @@ function resolveUrl(relative, base) {
     return relative;
   }
   try {
-    return new URL(relative, base).href;
+    // If base is a relative path, make it absolute using page origin
+    let absBase = base;
+    if (base && !base.startsWith('http://') && !base.startsWith('https://') && !base.startsWith('data:')) {
+      absBase = new URL(base, window.location.origin).href;
+    }
+    return new URL(relative, absBase).href;
   } catch {
     return relative;
   }

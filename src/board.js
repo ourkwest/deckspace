@@ -95,19 +95,30 @@ export function renderBoard(layout, viewData, localPlayerId, allPlayerIds, deckI
 
 /**
  * Compute a card scale factor based on viewport and place count.
- * Smaller viewports or more places → smaller cards.
+ * Goal: fill available space intelligently — larger viewport = larger cards,
+ * more places = slightly smaller cards but not too aggressive.
  */
 function computeCardScale(container, placeCount) {
   const vw = container.clientWidth || window.innerWidth;
   const vh = container.clientHeight || window.innerHeight;
-  const minDim = Math.min(vw, vh);
 
-  // Base: on a 400px-wide phone, scale 1.0 looks right with ~4 places
-  // Scale down when viewport is smaller or there are many places
-  const viewportFactor = Math.min(1.2, minDim / 400);
-  const densityFactor = placeCount <= 4 ? 1 : Math.max(0.5, 4 / placeCount);
+  const baseCardW = 50;
+  const baseCardH = 70;
 
-  return Math.max(0.4, Math.min(1.3, viewportFactor * densityFactor));
+  // Estimate grid layout: places arranged roughly by aspect ratio
+  const cols = Math.ceil(Math.sqrt(placeCount * (vw / vh)));
+  const rows = Math.ceil(placeCount / cols);
+
+  // Target: cards should fill about 60% of their slot width
+  const slotW = vw / Math.max(cols, 1);
+  const scaleByWidth = (slotW * 0.6) / baseCardW;
+
+  // And about 45% of slot height (leaving room for spreads/labels)
+  const slotH = vh / Math.max(rows, 1);
+  const scaleByHeight = (slotH * 0.45) / baseCardH;
+
+  const scale = Math.min(scaleByWidth, scaleByHeight);
+  return Math.max(0.8, Math.min(3, scale));
 }
 
 function renderTableArea(container, globalPlaces, otherPlaces, localPlayerId, allPlayerIds, deckInfo, callbacks, cardScale) {
@@ -117,10 +128,29 @@ function renderTableArea(container, globalPlaces, otherPlaces, localPlayerId, al
   const localIndex = allPlayerIds.indexOf(localPlayerId);
   const playerCount = allPlayerIds.length;
 
+  // Compute bounds for all places, accounting for card spread extent
+  const allLocations = [];
+  const allExtents = []; // how far cards extend below/right of the anchor
+  for (const place of globalPlaces) {
+    const loc = place.config?.location || { x: 50, y: 50 };
+    allLocations.push(loc);
+    allExtents.push(computePlaceExtent(place, cardScale));
+  }
+  for (const place of otherPlaces) {
+    const seatPos = getSeatPosition(place.ownerIndex, localIndex, playerCount);
+    const loc = place.config?.location || { x: 50, y: 50 };
+    allLocations.push({
+      x: seatPos.x + (loc.x - 50) * 0.3,
+      y: seatPos.y + (loc.y - 50) * 0.3,
+    });
+    allExtents.push(computePlaceExtent(place, cardScale));
+  }
+  const bounds = computeBoundsWithExtents(allLocations, allExtents, container, cardScale);
+
   // Render global places
   for (const place of globalPlaces) {
     const el = renderPlace(place, deckInfo, 0, callbacks, cardScale);
-    positionElement(el, place.config?.location, container);
+    positionElement(el, place.config?.location, bounds);
     container.appendChild(el);
   }
 
@@ -136,7 +166,7 @@ function renderTableArea(container, globalPlaces, otherPlaces, localPlayerId, al
       x: seatPos.x + (loc.x - 50) * 0.3,
       y: seatPos.y + (loc.y - 50) * 0.3,
     };
-    positionElement(el, adjustedLoc, container);
+    positionElement(el, adjustedLoc, bounds);
     container.appendChild(el);
   }
 }
@@ -144,9 +174,14 @@ function renderTableArea(container, globalPlaces, otherPlaces, localPlayerId, al
 function renderPlayerArea(container, places, deckInfo, callbacks, cardScale) {
   container.innerHTML = '';
 
+  // Compute bounds for player places with extents
+  const allLocations = places.map(p => p.config?.location || { x: 50, y: 50 });
+  const allExtents = places.map(p => computePlaceExtent(p, cardScale));
+  const bounds = computeBoundsWithExtents(allLocations, allExtents, container, cardScale);
+
   for (const place of places) {
     const el = renderPlace(place, deckInfo, 0, callbacks, cardScale);
-    positionElement(el, place.config?.location, container);
+    positionElement(el, place.config?.location, bounds);
     container.appendChild(el);
   }
 }
@@ -301,13 +336,99 @@ function getCardAlt(cardData) {
 /**
  * Position an element within a container using percentage-based coordinates.
  */
-function positionElement(el, location, container) {
+/**
+ * Compute the bounding box of a set of locations.
+ */
+function computeBounds(locations) {
+  if (locations.length === 0) return { minX: 0, maxX: 100, minY: 0, maxY: 100 };
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (const loc of locations) {
+    if (loc.x < minX) minX = loc.x;
+    if (loc.x > maxX) maxX = loc.x;
+    if (loc.y < minY) minY = loc.y;
+    if (loc.y > maxY) maxY = loc.y;
+  }
+  return { minX, maxX, minY, maxY };
+}
+
+/**
+ * Compute how far a place's cards extend from its anchor point (in pixels).
+ */
+function computePlaceExtent(place, cardScale) {
+  const config = place.config || {};
+  const arrangement = config.arrangement || { spreadX: 0, spreadY: 0 };
+  const cardCount = place.cards?.length || 0;
+  const n = Math.max(0, cardCount - 1);
+  return {
+    extentX: n * Math.abs(arrangement.spreadX || 0) * cardScale + 50 * cardScale,
+    extentY: n * Math.abs(arrangement.spreadY || 0) * cardScale + 70 * cardScale,
+  };
+}
+
+/**
+ * Compute bounds that account for place extents, ensuring cards don't overflow the container.
+ * Returns an adjusted bounds object with extra padding for the bottom/right.
+ */
+function computeBoundsWithExtents(locations, extents, container, cardScale) {
+  if (locations.length === 0) return { minX: 0, maxX: 100, minY: 0, maxY: 100 };
+
+  const containerW = container.clientWidth || window.innerWidth;
+  const containerH = container.clientHeight || window.innerHeight;
+
+  // Find the maximum extent among places at the bottom/right edges
+  let maxExtentY = 70 * cardScale; // at minimum, one card height
+  let maxExtentX = 50 * cardScale;
+  for (const ext of extents) {
+    if (ext.extentY > maxExtentY) maxExtentY = ext.extentY;
+    if (ext.extentX > maxExtentX) maxExtentX = ext.extentX;
+  }
+
+  // Convert extents to percentage of container to determine padding
+  const padBottom = (maxExtentY / containerH) * 100;
+  const padRight = (maxExtentX / containerW) * 100;
+  // Also pad top/left for the card center offset
+  const padTop = (35 * cardScale / containerH) * 100;
+  const padLeft = (25 * cardScale / containerW) * 100;
+
+  const baseBounds = computeBounds(locations);
+
+  // Return bounds that position uses — we shrink the usable area to account for overflow
+  return {
+    ...baseBounds,
+    padTop: Math.min(padTop + 2, 15),
+    padBottom: Math.min(padBottom + 2, 40),
+    padLeft: Math.min(padLeft + 2, 15),
+    padRight: Math.min(padRight + 2, 25),
+  };
+}
+
+function positionElement(el, location, bounds) {
   if (!location) return;
-  // Convert setup coordinates to percentage positions
-  // Setup uses a virtual coordinate space; we map to % of container
   el.style.position = 'absolute';
-  el.style.left = `${location.x}%`;
-  el.style.top = `${location.y}%`;
+
+  // Determine usable area (accounting for card extent padding)
+  const padTop = bounds.padTop || 5;
+  const padBottom = bounds.padBottom || 5;
+  const padLeft = bounds.padLeft || 5;
+  const padRight = bounds.padRight || 5;
+  const usableX = 100 - padLeft - padRight;
+  const usableY = 100 - padTop - padBottom;
+
+  let normX, normY;
+  if (bounds.maxX > bounds.minX || bounds.maxY > bounds.minY) {
+    const rangeX = bounds.maxX - bounds.minX || 1;
+    const rangeY = bounds.maxY - bounds.minY || 1;
+    normX = bounds.maxX === bounds.minX ? 50 : padLeft + ((location.x - bounds.minX) / rangeX) * usableX;
+    normY = bounds.maxY === bounds.minY ? 50 : padTop + ((location.y - bounds.minY) / rangeY) * usableY;
+  } else {
+    normX = 50;
+    normY = 50;
+  }
+  el.style.left = `${normX}%`;
+  el.style.top = `${normY}%`;
+  // Prepend centering translate to any existing transform (e.g. rotation)
+  const existing = el.style.transform || '';
+  el.style.transform = `translate(-50%, -50%) ${existing}`.trim();
 }
 
 /**

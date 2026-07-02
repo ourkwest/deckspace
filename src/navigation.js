@@ -23,7 +23,7 @@ export function createNavigation(uiContainer, gameContainer, onGameStart) {
 
   function show(screen) {
     currentScreen = screen;
-    gameContainer.style.display = screen === 'game' ? 'block' : 'none';
+    gameContainer.style.display = screen === 'game' ? 'flex' : 'none';
     uiContainer.style.display = screen === 'game' ? 'none' : 'flex';
     if (screen !== 'game') renderScreen();
   }
