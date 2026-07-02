@@ -44,8 +44,6 @@
     .place { position: absolute; min-width: 50px; min-height: 70px; transform-origin: center center; cursor: pointer; transition: box-shadow 0.2s; }
     .place:hover { box-shadow: 0 0 12px rgba(79,195,247,0.3); }
     .place-empty { width: 50px; height: 70px; border: 2px dashed #2a4a2a; border-radius: 4px; }
-    .place-label { position: absolute; bottom: -18px; left: 50%; transform: translateX(-50%); font-size: 0.65rem; color: #6a9a6a; white-space: nowrap; opacity: 0; transition: opacity 0.2s; }
-    .place:hover .place-label, .place.zoomed .place-label { opacity: 1; }
 
     /* Cards */
     .card { position: absolute; width: 50px; height: 70px; border-radius: 4px; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; transform-origin: center center; }
@@ -73,6 +71,30 @@
     .board-zoomed .place-name { width: 100%; text-align: center; color: #4fc3f7; font-size: 1rem; margin-bottom: 12px; }
     .board-zoomed .card { position: relative; width: 70px; height: 98px; flex-shrink: 0; }
     .board-zoomed .card img { width: 100%; height: 100%; }
+
+    /* Viewport-aware card scaling in overview */
+    .place { --card-scale: 1; }
+    .board-table .card, .board-player .card { width: calc(50px * var(--card-scale)); height: calc(70px * var(--card-scale)); }
+    .board-table .place-empty, .board-player .place-empty { width: calc(50px * var(--card-scale)); height: calc(70px * var(--card-scale)); }
+
+    /* Place labels in overview */
+    .place-label { position: absolute; bottom: -18px; left: 50%; transform: translateX(-50%); font-size: 0.65rem; color: #6a9a6a; white-space: nowrap; pointer-events: none; opacity: 0.85; }
+
+    /* Ask prompt dialog */
+    .ask-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; }
+    .ask-dialog { background: #1a1a2e; border: 1px solid #333; border-radius: 12px; padding: 24px 20px; min-width: 240px; max-width: 300px; display: flex; flex-direction: column; gap: 10px; }
+    .ask-title { color: #4fc3f7; font-size: 1.1rem; font-weight: bold; text-align: center; margin-bottom: 8px; }
+    .ask-option { padding: 12px 16px; font-size: 1rem; background: #2a2a4a; color: #e0e0e0; border: 1px solid #444; border-radius: 6px; cursor: pointer; text-align: center; transition: background 0.15s; }
+    .ask-option:hover { background: #3a3a5a; }
+    .ask-cancel { padding: 10px 16px; font-size: 0.9rem; background: transparent; color: #888; border: 1px solid #333; border-radius: 6px; cursor: pointer; text-align: center; margin-top: 4px; }
+    .ask-cancel:hover { background: #1a1a1a; }
+
+    /* Destination picker — spatial layout */
+    .dest-board { position: relative; width: 100%; height: 100%; }
+    .dest-place-btn { position: absolute; display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 60px; min-height: 44px; padding: 8px 12px; background: #1a2e1a; border: 2px solid #2a5a2a; border-radius: 8px; cursor: pointer; transform: translate(-50%, -50%); transition: border-color 0.15s, background 0.15s; }
+    .dest-place-btn:hover, .dest-place-btn:active { border-color: #4fc3f7; background: #1a3a3a; }
+    .dest-place-btn .dest-name { color: #4fc3f7; font-size: 0.8rem; font-weight: bold; white-space: nowrap; }
+    .dest-place-btn .dest-count { color: #666; font-size: 0.7rem; }
   </style>
 </head>
 <body>

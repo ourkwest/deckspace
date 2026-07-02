@@ -83,14 +83,34 @@ export function renderBoard(layout, viewData, localPlayerId, allPlayerIds, deckI
     playerArea.style.flex = '1';
   }
 
+  // Compute viewport-aware card scale factor
+  const cardScale = computeCardScale(layout.container, globalPlaces.length + otherPlaces.length + ownPlaces.length);
+
   // Render top half — global + other players' places
-  renderTableArea(tableArea, globalPlaces, otherPlaces, localPlayerId, allPlayerIds, deckInfo, callbacks);
+  renderTableArea(tableArea, globalPlaces, otherPlaces, localPlayerId, allPlayerIds, deckInfo, callbacks, cardScale);
 
   // Render bottom half — player's own places
-  renderPlayerArea(playerArea, ownPlaces, deckInfo, callbacks);
+  renderPlayerArea(playerArea, ownPlaces, deckInfo, callbacks, cardScale);
 }
 
-function renderTableArea(container, globalPlaces, otherPlaces, localPlayerId, allPlayerIds, deckInfo, callbacks) {
+/**
+ * Compute a card scale factor based on viewport and place count.
+ * Smaller viewports or more places → smaller cards.
+ */
+function computeCardScale(container, placeCount) {
+  const vw = container.clientWidth || window.innerWidth;
+  const vh = container.clientHeight || window.innerHeight;
+  const minDim = Math.min(vw, vh);
+
+  // Base: on a 400px-wide phone, scale 1.0 looks right with ~4 places
+  // Scale down when viewport is smaller or there are many places
+  const viewportFactor = Math.min(1.2, minDim / 400);
+  const densityFactor = placeCount <= 4 ? 1 : Math.max(0.5, 4 / placeCount);
+
+  return Math.max(0.4, Math.min(1.3, viewportFactor * densityFactor));
+}
+
+function renderTableArea(container, globalPlaces, otherPlaces, localPlayerId, allPlayerIds, deckInfo, callbacks, cardScale) {
   container.innerHTML = '';
 
   // Calculate table rotation for other players
@@ -99,7 +119,7 @@ function renderTableArea(container, globalPlaces, otherPlaces, localPlayerId, al
 
   // Render global places
   for (const place of globalPlaces) {
-    const el = renderPlace(place, deckInfo, 0, callbacks);
+    const el = renderPlace(place, deckInfo, 0, callbacks, cardScale);
     positionElement(el, place.config?.location, container);
     container.appendChild(el);
   }
@@ -107,7 +127,7 @@ function renderTableArea(container, globalPlaces, otherPlaces, localPlayerId, al
   // Render other players' places rotated around table
   for (const place of otherPlaces) {
     const seatAngle = getSeatRotation(place.ownerIndex, localIndex, playerCount);
-    const el = renderPlace(place, deckInfo, seatAngle, callbacks);
+    const el = renderPlace(place, deckInfo, seatAngle, callbacks, cardScale);
     // Position relative to owner's seat
     const seatPos = getSeatPosition(place.ownerIndex, localIndex, playerCount);
     const loc = place.config?.location || { x: 50, y: 50 };
@@ -121,11 +141,11 @@ function renderTableArea(container, globalPlaces, otherPlaces, localPlayerId, al
   }
 }
 
-function renderPlayerArea(container, places, deckInfo, callbacks) {
+function renderPlayerArea(container, places, deckInfo, callbacks, cardScale) {
   container.innerHTML = '';
 
   for (const place of places) {
-    const el = renderPlace(place, deckInfo, 0, callbacks);
+    const el = renderPlace(place, deckInfo, 0, callbacks, cardScale);
     positionElement(el, place.config?.location, container);
     container.appendChild(el);
   }
@@ -134,10 +154,11 @@ function renderPlayerArea(container, places, deckInfo, callbacks) {
 /**
  * Render a single place with its cards.
  */
-function renderPlace(place, deckInfo, seatRotation, callbacks) {
+function renderPlace(place, deckInfo, seatRotation, callbacks, cardScale = 1) {
   const el = document.createElement('div');
   el.className = 'place';
   el.dataset.placeId = place.id;
+  el.style.setProperty('--card-scale', cardScale);
 
   const config = place.config || {};
   const arrangement = config.arrangement || { spreadX: 0, spreadY: 0, spreadAngle: 0 };
@@ -151,7 +172,7 @@ function renderPlace(place, deckInfo, seatRotation, callbacks) {
   const cards = place.cards || [];
   for (let i = 0; i < cards.length; i++) {
     const card = cards[i];
-    const cardEl = renderCard(card, i, cards.length, arrangement, deckInfo, callbacks);
+    const cardEl = renderCard(card, i, cards.length, arrangement, deckInfo, callbacks, cardScale);
     el.appendChild(cardEl);
   }
 
@@ -161,6 +182,12 @@ function renderPlace(place, deckInfo, seatRotation, callbacks) {
     empty.className = 'place-empty';
     el.appendChild(empty);
   }
+
+  // Place label — always visible in overview
+  const label = document.createElement('div');
+  label.className = 'place-label';
+  label.textContent = place.id.split(':').pop();
+  el.appendChild(label);
 
   // Tap handler for place
   el.addEventListener('click', (e) => {
@@ -174,14 +201,14 @@ function renderPlace(place, deckInfo, seatRotation, callbacks) {
 /**
  * Render a single card element.
  */
-function renderCard(card, index, total, arrangement, deckInfo, callbacks) {
+function renderCard(card, index, total, arrangement, deckInfo, callbacks, cardScale = 1) {
   const el = document.createElement('div');
   el.className = 'card' + (card.faceUp ? ' face-up' : ' face-down');
   el.dataset.cardId = card.id;
 
-  // Position within place based on arrangement
-  const offsetX = index * (arrangement.spreadX || 0);
-  const offsetY = index * (arrangement.spreadY || 0);
+  // Position within place based on arrangement (scaled)
+  const offsetX = index * (arrangement.spreadX || 0) * cardScale;
+  const offsetY = index * (arrangement.spreadY || 0) * cardScale;
   const offsetAngle = index * (arrangement.spreadAngle || 0);
 
   let transform = '';

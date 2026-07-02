@@ -87,7 +87,7 @@ export function createInteraction(callbacks) {
     callbacks.rerender();
   }
 
-  function completeMove(destPlaceId) {
+  async function completeMove(destPlaceId) {
     const viewData = callbacks.getViewData();
     const destPlace = viewData.places?.[destPlaceId];
     const config = destPlace?.config || {};
@@ -96,10 +96,38 @@ export function createInteraction(callbacks) {
     const arrivalLocation = config.arrivalLocation || 'top';
     const arrivalFlip = config.arrivalFlip || 'asIs';
 
-    // If arrival is 'ask', we'll default to 'top' and 'asIs' for now
-    // TODO: show a prompt for 'ask' options
-    const position = arrivalLocation === 'ask' ? 'top' : arrivalLocation;
-    const flip = arrivalFlip === 'ask' ? 'asIs' : arrivalFlip;
+    let position = arrivalLocation;
+    let flip = arrivalFlip;
+
+    // Prompt user if arrival settings are 'ask'
+    if (arrivalLocation === 'ask') {
+      position = await showAskPrompt('Place cards on…', [
+        { value: 'top', label: 'Top' },
+        { value: 'bottom', label: 'Bottom' },
+      ]);
+      if (!position) {
+        // User cancelled
+        state.mode = 'zoomed';
+        state.actionPending = null;
+        callbacks.rerender();
+        return;
+      }
+    }
+
+    if (arrivalFlip === 'ask') {
+      flip = await showAskPrompt('Flip cards…', [
+        { value: 'faceUp', label: 'Face Up' },
+        { value: 'faceDown', label: 'Face Down' },
+        { value: 'asIs', label: 'As Is' },
+      ]);
+      if (!flip) {
+        // User cancelled
+        state.mode = 'zoomed';
+        state.actionPending = null;
+        callbacks.rerender();
+        return;
+      }
+    }
 
     callbacks.sendAction({
       type: 'move',
@@ -159,6 +187,51 @@ export function createInteraction(callbacks) {
     cancelAction,
     clonePlace,
   };
+}
+
+/**
+ * Show a modal prompt with choices. Returns a Promise that resolves to the
+ * selected value or null if cancelled.
+ * @param {string} title
+ * @param {{value: string, label: string}[]} options
+ * @returns {Promise<string|null>}
+ */
+function showAskPrompt(title, options) {
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.className = 'ask-overlay';
+
+    const dialog = document.createElement('div');
+    dialog.className = 'ask-dialog';
+
+    const heading = document.createElement('div');
+    heading.className = 'ask-title';
+    heading.textContent = title;
+    dialog.appendChild(heading);
+
+    for (const opt of options) {
+      const btn = document.createElement('button');
+      btn.className = 'ask-option';
+      btn.textContent = opt.label;
+      btn.addEventListener('click', () => {
+        overlay.remove();
+        resolve(opt.value);
+      });
+      dialog.appendChild(btn);
+    }
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'ask-cancel';
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.addEventListener('click', () => {
+      overlay.remove();
+      resolve(null);
+    });
+    dialog.appendChild(cancelBtn);
+
+    overlay.appendChild(dialog);
+    document.body.appendChild(overlay);
+  });
 }
 
 /**

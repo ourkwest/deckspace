@@ -15,9 +15,9 @@ A serverless multiplayer mobile web game that simulates card decks on a table. P
 ### Phase 1: Foundation ✓
 - Vite + vanilla JS project scaffolding
 - GitHub Pages deploy workflow
-- Standard 52-card deck with inline SVG faces (`samples/standard-deck.json`, generated via `scripts/generate-deck.js`)
-- Rummy setup (`samples/rummy-setup.json`) — 2-4 players, draw pile, discard, hands, melds
-- Klondike Solitaire setup (`samples/klondike-setup.json`) — 1 player, stock, waste, foundations, tableaux
+- Standard 52-card deck with inline SVG faces (`public/samples/standard-deck.json`, generated via `scripts/generate-deck.js`)
+- Rummy setup (`public/samples/rummy-setup.json`) — 2-4 players, draw pile, discard, hands, melds
+- Klondike Solitaire setup (`public/samples/klondike-setup.json`) — 1 player, stock, waste, foundations, tableaux
 
 ### Phase 2: Core Engine ✓
 - `src/loader.js` — Fetches setup + deck files, resolves includes (circular ref detection), resolves sets (filter by tags, sort/shuffle, take N), validates structure
@@ -50,14 +50,14 @@ Guests send action requests → Host validates permissions → mutates state →
 ## What's NOT yet done / known gaps
 
 1. **Not tested end-to-end with a real hosted setup file** — needs `npm run dev` and a setup URL served somewhere (could use GitHub raw URLs for the samples)
-2. **"Ask" prompts** — when arrivalLocation or arrivalFlip is "ask", currently defaults to "top"/"asIs" instead of prompting the user
+2. ~~**"Ask" prompts**~~ ✓ — When arrivalLocation or arrivalFlip is "ask", a modal dialog prompts the user to choose (with cancel support)
 3. **Place cloning UI** — the backend supports it but there's no long-press gesture to trigger it
-4. **Overview layout scaling** — places are positioned by percentage but card sizes don't scale to screen; needs viewport-aware sizing
+4. ~~**Overview layout scaling**~~ ✓ — Viewport-aware card sizing via `computeCardScale()` and CSS variable `--card-scale`; adapts to screen size and place density
 5. **Touch gestures** — no pinch-to-zoom or pan on the overview yet
-6. **Place labels** — design says show on zoom; the zoomed view shows the name, but overview doesn't show on hover (mobile has no hover)
+6. ~~**Place labels**~~ ✓ — Place names are now always visible in the overview (shown below each place)
 7. **Undo** — design says nice-to-have; state is mutated in place (would need to snapshot before each mutation)
 8. **Game initialization dealing** — for Rummy, players need to manually draw their opening hand from the draw pile (no auto-deal logic beyond startingSet)
-9. **Destination picker UX** — currently shows a flat list; could show the spatial board with places highlighted instead
+9. ~~**Destination picker UX**~~ ✓ — Now shows a spatial board with places at their configured positions as tappable buttons (name + card count)
 10. **No tests** — all code is untested beyond build verification
 
 ## How to run

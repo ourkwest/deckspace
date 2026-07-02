@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Generates samples/standard-deck.json with inline SVG card faces
+// Generates public/samples/standard-deck.json with inline SVG card faces
 
 const suits = [
   { name: 'hearts', symbol: '♥', color: '#d32f2f' },
@@ -85,7 +85,7 @@ import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const outDir = join(__dirname, '..', 'samples');
+const outDir = join(__dirname, '..', 'public', 'samples');
 mkdirSync(outDir, { recursive: true });
 writeFileSync(join(outDir, 'standard-deck.json'), JSON.stringify(deck, null, 2));
-console.log('Generated samples/standard-deck.json (%d cards)', cards.length - 2);
+console.log('Generated public/samples/standard-deck.json (%d cards)', cards.length - 2);

@@ -324,26 +324,54 @@ function renderZoomedPlace(container, placeId, placeData, interactionState) {
 
 function renderDestinationPicker(container) {
   container.innerHTML = '';
+  container.style.position = 'relative';
+  container.style.display = 'block';
+  container.style.overflow = 'hidden';
 
   const title = document.createElement('div');
   title.className = 'place-name';
-  title.textContent = 'Select destination';
+  title.textContent = 'Tap a destination';
+  title.style.position = 'absolute';
+  title.style.top = '8px';
+  title.style.left = '0';
+  title.style.right = '0';
+  title.style.zIndex = '10';
   container.appendChild(title);
 
-  // Show all places as tappable targets
+  const board = document.createElement('div');
+  board.className = 'dest-board';
+  container.appendChild(board);
+
+  const currentPlaceId = interaction.getState().zoomedPlaceId;
+
+  // Separate places into table (global + others) and player (own)
+  const containerHeight = container.clientHeight || window.innerHeight - 60;
+  const containerWidth = container.clientWidth || window.innerWidth;
+
   for (const [id, placeData] of Object.entries(localView.places || {})) {
-    if (id === interaction.getState().zoomedPlaceId) continue;
+    if (id === currentPlaceId) continue;
 
-    const el = document.createElement('div');
-    el.className = 'dest-place';
-    el.style.cssText = 'padding:12px 16px;margin:4px 0;background:#1a2e1a;border:1px solid #2a5a2a;border-radius:6px;cursor:pointer;';
-
-    const placeName = id.split(':').pop();
+    const config = placeData.config || {};
+    const loc = config.location || { x: 50, y: 50 };
     const cardCount = placeData.cards?.length || 0;
-    el.innerHTML = `<span style="color:#4fc3f7">${escHtml(placeName)}</span> <span style="color:#666;font-size:0.8rem">(${cardCount} cards)</span>`;
+    const placeName = id.split(':').pop();
 
-    el.addEventListener('click', () => interaction.onPlaceTap(id));
-    container.appendChild(el);
+    const btn = document.createElement('div');
+    btn.className = 'dest-place-btn';
+
+    // Position based on whether it's a player place or global/other
+    let yOffset = 0;
+    if (id.startsWith('player:') && id.includes(`:${localPlayerId}:`)) {
+      // Own player place: bottom half
+      yOffset = 50;
+    }
+    btn.style.left = `${loc.x}%`;
+    btn.style.top = `${yOffset + loc.y * 0.5}%`;
+
+    btn.innerHTML = `<span class="dest-name">${escHtml(placeName)}</span><span class="dest-count">${cardCount}</span>`;
+
+    btn.addEventListener('click', () => interaction.onPlaceTap(id));
+    board.appendChild(btn);
   }
 }
 
