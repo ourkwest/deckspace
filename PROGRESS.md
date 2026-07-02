@@ -78,3 +78,9 @@ npm run build  # production build to dist/
 - shuffleOnArrival on destination places instead of manual shuffle button
 - Tap-to-select interaction (no drag-and-drop)
 - Permissions via `othersCanMoveIn`/`othersCanMoveOut` flags on places
+
+
+## TODO:
+
+Need to handle dynamic resizing on desktop? - maybe not actually - it is mobile first!
+Need to think more about UX

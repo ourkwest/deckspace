@@ -84,7 +84,8 @@ export function renderBoard(layout, viewData, localPlayerId, allPlayerIds, deckI
   }
 
   // Compute viewport-aware card scale factor
-  const cardScale = computeCardScale(layout.container, globalPlaces.length + otherPlaces.length + ownPlaces.length);
+  const allPlaces = [...globalPlaces, ...otherPlaces, ...ownPlaces];
+  const cardScale = computeCardScale(layout.container, allPlaces.length, allPlaces);
 
   // Render top half — global + other players' places
   renderTableArea(tableArea, globalPlaces, otherPlaces, localPlayerId, allPlayerIds, deckInfo, callbacks, cardScale);
@@ -98,27 +99,51 @@ export function renderBoard(layout, viewData, localPlayerId, allPlayerIds, deckI
  * Goal: fill available space intelligently — larger viewport = larger cards,
  * more places = slightly smaller cards but not too aggressive.
  */
-function computeCardScale(container, placeCount) {
+function computeCardScale(container, placeCount, places) {
   const vw = container.clientWidth || window.innerWidth;
   const vh = container.clientHeight || window.innerHeight;
 
   const baseCardW = 50;
   const baseCardH = 70;
 
-  // Estimate grid layout: places arranged roughly by aspect ratio
-  const cols = Math.ceil(Math.sqrt(placeCount * (vw / vh)));
-  const rows = Math.ceil(placeCount / cols);
+  // Find the widest row: group places by similar y-coordinate and count columns
+  let maxCols = 1;
+  if (places && places.length > 0) {
+    // Group places by y (within 20% tolerance of total y-range)
+    const ys = places.map(p => p.config?.location?.y ?? 50);
+    const minY = Math.min(...ys);
+    const maxY = Math.max(...ys);
+    const yRange = maxY - minY || 1;
+    const tolerance = yRange * 0.2;
 
-  // Target: cards should fill about 60% of their slot width
-  const slotW = vw / Math.max(cols, 1);
-  const scaleByWidth = (slotW * 0.6) / baseCardW;
+    const rows = [];
+    for (const y of ys) {
+      let found = false;
+      for (const row of rows) {
+        if (Math.abs(y - row.y) <= tolerance) {
+          row.count++;
+          found = true;
+          break;
+        }
+      }
+      if (!found) rows.push({ y, count: 1 });
+    }
+    maxCols = Math.max(...rows.map(r => r.count), 1);
+  } else {
+    maxCols = Math.ceil(Math.sqrt(placeCount * (vw / vh)));
+  }
 
-  // And about 45% of slot height (leaving room for spreads/labels)
-  const slotH = vh / Math.max(rows, 1);
-  const scaleByHeight = (slotH * 0.45) / baseCardH;
+  const rows = Math.ceil(placeCount / maxCols);
+
+  // Cards should fit: maxCols cards across with gaps
+  const gapFactor = 0.85; // 85% of slot used by card, 15% gap
+  const scaleByWidth = (vw / maxCols * gapFactor) / baseCardW;
+
+  // And rows tall with room for spreads
+  const scaleByHeight = (vh / Math.max(rows, 1) * 0.4) / baseCardH;
 
   const scale = Math.min(scaleByWidth, scaleByHeight);
-  return Math.max(0.8, Math.min(3, scale));
+  return Math.max(0.6, Math.min(3, scale));
 }
 
 function renderTableArea(container, globalPlaces, otherPlaces, localPlayerId, allPlayerIds, deckInfo, callbacks, cardScale) {
