@@ -203,3 +203,96 @@ I believe the design is now complete enough to implement v1. Here's the planned 
 17. Error/validation feedback on setup load
 18. Lazy image loading with fallback
 19. Undo (nice-to-have)
+
+---
+
+## Layout & Rendering Redesign (2026-07-04)
+
+Following playtesting, the v1 absolute-positioning layout (x/y coordinates in setup files) has several problems: labels clip off-screen, places overflow on different screen sizes, rotation of opponents' cards makes them unreadable. This section documents the agreed replacement design.
+
+### Place Groups
+
+The layout hierarchy becomes: **Board → Groups → Places → Cards**
+
+Groups are defined explicitly in the setup JSON. The board lays out groups using flexbox. Within each group, places are laid out according to the group's direction and any relative positioning constraints.
+
+```json
+"groups": [
+  {
+    "name": "Stock & Waste",
+    "direction": "row",
+    "places": ["Draw Pile", "Discard Pile"]
+  },
+  {
+    "name": "Foundations",
+    "direction": "row",
+    "places": ["F1", "F2", "F3", "F4"]
+  }
+]
+```
+
+- Places not assigned to a group get their own implicit single-place group.
+- Groups for player places are defined once and replicated per player (symmetric — all players have the same group structure).
+
+### Within-Group Positioning
+
+Groups specify a `direction` ("row" or "column"). Places are laid out in declaration order by default.
+
+For exceptions, a place can specify relative positioning:
+```json
+{ "name": "F1", "position": "rightOf:Waste", "gap": 2 }
+```
+
+This keeps simple cases simple (most groups are just a row or column in declaration order) while allowing spatial relationships for games that need them (e.g. a gap between waste and foundations in Klondike).
+
+### Board Layout of Groups
+
+The board arranges groups using flex-wrap. No x/y coordinates for groups — they flow naturally. On a portrait phone, groups will stack vertically. On a wider screen, smaller groups may sit side-by-side.
+
+The board is split into two sections:
+- **Table area** — global groups + other players' visible groups
+- **Player area** — the local player's groups
+
+These two areas share the viewport. Their relative size is proportional to content (not a fixed 50/50 split).
+
+### Other Players' Places
+
+Other players' visible places (e.g. melds in Rummy) are displayed in the table area with a **coloured border** identifying the owner (using the same hue derived from their name). No rotation — cards are always displayed upright and readable.
+
+### Card Scaling
+
+Cards scale uniformly to fit all groups on screen without overflow. No scrollbars or pinch-to-zoom for v1.
+
+**Algorithm: pre-calculate scale from known quantities.**
+
+1. For each section (table, player), compute the total space needed at scale=1:
+   - Each place's width = base-card-width + (spread-x × max-card-count)
+   - Each group's width/height = sum of its places in the group's direction
+   - Section total = groups laid out with flex-wrap logic
+2. Scale factor = min(available-width / needed-width, available-height / needed-height)
+3. Clamp to a minimum (cards must remain tappable, ~40px wide) and a maximum (no giant cards on desktop)
+4. Apply via CSS variable `--card-scale`
+
+**Recalculate when:** game starts, window resizes, or card count changes significantly (a place grows/shrinks beyond a threshold).
+
+If the pre-calculation is slightly off and overflow occurs, containers clip gracefully (no scrollbars appearing unexpectedly).
+
+### Flip Resolution Timing
+
+`topFaceUp` and arrival-flip rules resolve **after the hand is deposited**, not on pickup. This prevents information leaking before the player commits to their action.
+
+Example: picking up the top (face-up) card from a topFaceUp pile does NOT immediately flip the next card face-up. That flip happens only once the picked-up card is deposited elsewhere (or if the pickup is cancelled, the card returns and remains the top face-up card).
+
+### Summary of Decisions
+
+| Decision | Choice |
+|----------|--------|
+| Layout model | Flex-based place groups (no x/y coordinates) |
+| Group definition | Explicit in setup JSON |
+| Within-group layout | Direction (row/col) + declaration order + optional relative positioning |
+| Board layout of groups | Flex-wrap, content-proportional section sizes |
+| Other players | Coloured border, no rotation |
+| Card sizing | Pre-calculated scale factor, CSS variable |
+| Scroll/zoom | None for v1 (cards shrink to fit) |
+| Flip timing | Resolves on deposit, not pickup |
+| Player symmetry | All players share same place/group structure |

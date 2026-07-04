@@ -127,7 +127,7 @@ If a destination place has `arrivalLocation: "ask"` or `arrivalFlip: "ask"`, the
 - Rotation/flip states (e.g. tapped cards in MTG): more than just faceUp/faceDown
 - Splitting the hand: returning only some cards (for now, cancel returns all)
 
-## note
+## notes
 1. Should flips be resolved in places (e.g. top card face up in a pile) only after your hand is empty? Discuss
 3. We might need to rethink the layout logic. This should be a discussion.
    - For layout, places should include their labels, so we layout a container with both the place and the label to ensure the label is visible.
