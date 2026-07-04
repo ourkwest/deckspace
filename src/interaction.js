@@ -64,6 +64,12 @@ export function createInteraction(callbacks) {
     const place = viewData.places?.[placeId];
     if (!place?.cards) return;
 
+    // Check move-out permission
+    const config = place.config || {};
+    const localId = callbacks.getLocalPlayerId();
+    const isOwner = !config.owner || config.owner === localId;
+    if (!isOwner && !(config.othersCanMoveOut ?? false)) return;
+
     const cardIndex = place.cards.findIndex(c => c.id === cardId);
     if (cardIndex === -1) return;
 
@@ -100,6 +106,11 @@ export function createInteraction(callbacks) {
     const viewData = callbacks.getViewData();
     const destPlace = viewData.places?.[placeId];
     const config = destPlace?.config || {};
+
+    // Check move-in permission
+    const localId = callbacks.getLocalPlayerId();
+    const isOwner = !config.owner || config.owner === localId;
+    if (!isOwner && !(config.othersCanMoveIn ?? false)) return;
 
     // Determine arrival position and flip
     let position = config.arrivalLocation || 'top';

@@ -239,6 +239,22 @@ function validateSetup(obj) {
     }
   };
 
+  const validateGroup = (group, prefix, validPlaceNames) => {
+    if (typeof group.name !== 'string') errors.push(`${prefix}: missing "name"`);
+    if (group.direction && !['row', 'column'].includes(group.direction)) {
+      errors.push(`${prefix} "${group.name}": direction must be "row" or "column"`);
+    }
+    if (!Array.isArray(group.places)) {
+      errors.push(`${prefix} "${group.name}": missing "places" array`);
+    } else {
+      for (const placeName of group.places) {
+        if (!validPlaceNames.has(placeName)) {
+          errors.push(`${prefix} "${group.name}": references unknown place "${placeName}"`);
+        }
+      }
+    }
+  };
+
   if (obj.globalPlaces) {
     if (!Array.isArray(obj.globalPlaces)) errors.push('"globalPlaces" must be an array');
     else obj.globalPlaces.forEach(p => validatePlace(p, 'globalPlace'));
@@ -246,6 +262,18 @@ function validateSetup(obj) {
   if (obj.playerPlaces) {
     if (!Array.isArray(obj.playerPlaces)) errors.push('"playerPlaces" must be an array');
     else obj.playerPlaces.forEach(p => validatePlace(p, 'playerPlace'));
+  }
+
+  // Validate groups reference valid places
+  if (obj.globalGroups) {
+    const globalNames = new Set((obj.globalPlaces || []).map(p => p.name));
+    if (!Array.isArray(obj.globalGroups)) errors.push('"globalGroups" must be an array');
+    else obj.globalGroups.forEach(g => validateGroup(g, 'globalGroup', globalNames));
+  }
+  if (obj.playerGroups) {
+    const playerNames = new Set((obj.playerPlaces || []).map(p => p.name));
+    if (!Array.isArray(obj.playerGroups)) errors.push('"playerGroups" must be an array');
+    else obj.playerGroups.forEach(g => validateGroup(g, 'playerGroup', playerNames));
   }
 
   return errors;

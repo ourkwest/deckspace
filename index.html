@@ -37,16 +37,25 @@
 
     /* Game board */
     .board { display: flex; flex-direction: column; width: 100%; height: 100%; background: #0d1b0d; }
-    .board-table { flex: 1; position: relative; overflow: hidden; border-bottom: 1px solid #1a3a1a; background: radial-gradient(ellipse at center, #143014 0%, #0d1b0d 100%); }
-    .board-player { flex: 1; position: relative; overflow: hidden; background: #0a150a; }
+    .board-table { flex: 1; display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; padding: 8px; overflow: hidden; border-bottom: 1px solid #1a3a1a; background: radial-gradient(ellipse at center, #143014 0%, #0d1b0d 100%); }
+    .board-player { flex: 1; display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; padding: 8px; overflow: hidden; background: #0a150a; }
+
+    /* Groups */
+    .group { display: flex; flex-direction: row; align-items: flex-start; gap: 8px; flex-wrap: nowrap; }
+    .group-column { flex-direction: column; }
+
+    /* Other player sections */
+    .other-player { position: relative; display: flex; flex-direction: row; align-items: flex-start; gap: 8px; padding: 12px 8px 4px; border: 2px solid var(--player-color, #555); border-radius: 8px; flex-wrap: wrap; }
+    .player-label { position: absolute; top: -0.6em; left: 12px; font-size: 0.7rem; color: var(--player-color, #999); background: #0d1b0d; padding: 0 4px; white-space: nowrap; }
 
     /* Places */
-    .place { position: absolute; min-width: 50px; min-height: 70px; transform-origin: center center; cursor: pointer; transition: box-shadow 0.2s; }
+    .place { display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: pointer; transition: box-shadow 0.2s; }
     .place:hover { box-shadow: 0 0 12px rgba(79,195,247,0.3); }
-    .place-empty { width: 50px; height: 70px; border: 2px dashed #4a8a4a; border-radius: 4px; background: rgba(255,255,255,0.03); }
+    .place-cards { position: relative; }
+    .place-empty { width: 100%; height: 100%; border: 2px dashed #4a8a4a; border-radius: 4px; background: rgba(255,255,255,0.03); }
 
     /* Cards */
-    .card { position: absolute; width: 50px; height: 70px; border-radius: 4px; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; transform-origin: center center; box-shadow: 0 1px 3px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.15); }
+    .card { position: absolute; width: calc(50px * var(--card-scale, 1)); height: calc(70px * var(--card-scale, 1)); border-radius: 4px; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; transform-origin: center center; box-shadow: 0 1px 3px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.15); }
     .card:hover { z-index: 10; box-shadow: 0 2px 6px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.25); }
     .card.selected { box-shadow: 0 0 0 3px #4fc3f7, 0 0 12px rgba(79,195,247,0.5); z-index: 11; }
     .card img { width: 100%; height: 100%; object-fit: contain; border-radius: 4px; pointer-events: none; }
@@ -57,6 +66,9 @@
     /* Default card back */
     .card-default-back { width: 100%; height: 100%; border-radius: 4px; background: #1a237e; background-image: repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(255,255,255,0.08) 3px, rgba(255,255,255,0.08) 6px), repeating-linear-gradient(-45deg, transparent, transparent 3px, rgba(255,255,255,0.08) 3px, rgba(255,255,255,0.08) 6px); border: 2px solid #5c6bc0; }
 
+    /* Place labels */
+    .place-label { font-size: 0.65rem; color: #6a9a6a; white-space: nowrap; pointer-events: none; opacity: 0.85; text-align: center; }
+
     /* Action bar */
     .action-bar { position: fixed; bottom: 0; left: 0; right: 0; display: flex; align-items: center; gap: 8px; padding: 12px 16px; background: rgba(10,10,26,0.95); border-top: 1px solid #333; z-index: 100; overflow-x: auto; }
     .action-bar.selecting { justify-content: center; }
@@ -65,20 +77,12 @@
     .action-btn:hover { background: #333; }
     .action-btn.primary { background: #4fc3f7; color: #0a0a1a; border-color: #4fc3f7; font-weight: bold; }
 
-    /* Zoomed view */
+    /* Ask prompt dialog */
     .board.zoomed .board-table, .board.zoomed .board-player { display: none; }
     .board-zoomed { position: absolute; top: 0; left: 0; right: 0; bottom: 60px; overflow: auto; padding: 20px; display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: center; gap: 8px; }
     .board-zoomed .place-name { width: 100%; text-align: center; color: #4fc3f7; font-size: 1rem; margin-bottom: 12px; }
     .board-zoomed .card { position: relative; width: 70px; height: 98px; flex-shrink: 0; }
     .board-zoomed .card img { width: 100%; height: 100%; }
-
-    /* Viewport-aware card scaling in overview */
-    .place { --card-scale: 1; }
-    .board-table .card, .board-player .card { width: calc(50px * var(--card-scale)); height: calc(70px * var(--card-scale)); }
-    .board-table .place-empty, .board-player .place-empty { width: calc(50px * var(--card-scale)); height: calc(70px * var(--card-scale)); }
-
-    /* Place labels in overview */
-    .place-label { position: absolute; bottom: -16px; left: 50%; transform: translateX(-50%); font-size: 0.65rem; color: #6a9a6a; white-space: nowrap; pointer-events: none; opacity: 0.85; }
 
     /* Ask prompt dialog */
     .ask-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; }

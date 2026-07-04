@@ -7,8 +7,50 @@
   },
   "globalPlaces": [
     {
+      "name": "Stock",
+      "arrangement": { "spreadX": 0.1, "spreadY": 0.1 },
+      "defaultFlip": "faceDown",
+      "startingSet": "full",
+      "arrivalLocation": "top",
+      "shuffleOnArrival": true
+    },
+    {
+      "name": "Waste",
+      "arrangement": { "spreadX": 0, "spreadY": 3 },
+      "defaultFlip": "topFaceUp",
+      "arrivalLocation": "top",
+      "arrivalFlip": "faceUp"
+    },
+    {
+      "name": "Foundation 1",
+      "arrangement": { "spreadX": 0.2, "spreadY": 0.2 },
+      "defaultFlip": "faceUp",
+      "arrivalLocation": "top",
+      "arrivalFlip": "faceUp"
+    },
+    {
+      "name": "Foundation 2",
+      "arrangement": { "spreadX": 0.2, "spreadY": 0.2 },
+      "defaultFlip": "faceUp",
+      "arrivalLocation": "top",
+      "arrivalFlip": "faceUp"
+    },
+    {
+      "name": "Foundation 3",
+      "arrangement": { "spreadX": 0.2, "spreadY": 0.2 },
+      "defaultFlip": "faceUp",
+      "arrivalLocation": "top",
+      "arrivalFlip": "faceUp"
+    },
+    {
+      "name": "Foundation 4",
+      "arrangement": { "spreadX": 0.2, "spreadY": 0.2 },
+      "defaultFlip": "faceUp",
+      "arrivalLocation": "top",
+      "arrivalFlip": "faceUp"
+    },
+    {
       "name": "Tableau 1",
-      "location": { "x": 30, "y": 90 },
       "arrangement": { "spreadX": 0, "spreadY": 15 },
       "defaultFlip": "topFaceUp",
       "startingSet": "full",
@@ -18,7 +60,6 @@
     },
     {
       "name": "Tableau 2",
-      "location": { "x": 72, "y": 90 },
       "arrangement": { "spreadX": 0, "spreadY": 15 },
       "defaultFlip": "topFaceUp",
       "startingSet": "full",
@@ -28,7 +69,6 @@
     },
     {
       "name": "Tableau 3",
-      "location": { "x": 114, "y": 90 },
       "arrangement": { "spreadX": 0, "spreadY": 15 },
       "defaultFlip": "topFaceUp",
       "startingSet": "full",
@@ -38,7 +78,6 @@
     },
     {
       "name": "Tableau 4",
-      "location": { "x": 156, "y": 90 },
       "arrangement": { "spreadX": 0, "spreadY": 15 },
       "defaultFlip": "topFaceUp",
       "startingSet": "full",
@@ -48,7 +87,6 @@
     },
     {
       "name": "Tableau 5",
-      "location": { "x": 198, "y": 90 },
       "arrangement": { "spreadX": 0, "spreadY": 15 },
       "defaultFlip": "topFaceUp",
       "startingSet": "full",
@@ -58,7 +96,6 @@
     },
     {
       "name": "Tableau 6",
-      "location": { "x": 240, "y": 90 },
       "arrangement": { "spreadX": 0, "spreadY": 15 },
       "defaultFlip": "topFaceUp",
       "startingSet": "full",
@@ -68,62 +105,17 @@
     },
     {
       "name": "Tableau 7",
-      "location": { "x": 282, "y": 90 },
       "arrangement": { "spreadX": 0, "spreadY": 15 },
       "defaultFlip": "topFaceUp",
       "startingSet": "full",
       "startingCount": 7,
       "arrivalLocation": "top",
       "arrivalFlip": "faceUp"
-    },
-    {
-      "name": "Stock",
-      "location": { "x": 30, "y": 20 },
-      "arrangement": { "spreadX": 0.1, "spreadY": 0.1 },
-      "defaultFlip": "faceDown",
-      "startingSet": "full",
-      "arrivalLocation": "top",
-      "shuffleOnArrival": true
-    },
-    {
-      "name": "Waste",
-      "location": { "x": 75, "y": 20 },
-      "arrangement": { "spreadX": 0, "spreadY": 3 },
-      "defaultFlip": "topFaceUp",
-      "arrivalLocation": "top",
-      "arrivalFlip": "faceUp"
-    },
-    {
-      "name": "Foundation 1",
-      "location": { "x": 150, "y": 20 },
-      "arrangement": { "spreadX": 0.2, "spreadY": 0.2 },
-      "defaultFlip": "faceUp",
-      "arrivalLocation": "top",
-      "arrivalFlip": "faceUp"
-    },
-    {
-      "name": "Foundation 2",
-      "location": { "x": 195, "y": 20 },
-      "arrangement": { "spreadX": 0.2, "spreadY": 0.2 },
-      "defaultFlip": "faceUp",
-      "arrivalLocation": "top",
-      "arrivalFlip": "faceUp"
-    },
-    {
-      "name": "Foundation 3",
-      "location": { "x": 240, "y": 20 },
-      "arrangement": { "spreadX": 0.2, "spreadY": 0.2 },
-      "defaultFlip": "faceUp",
-      "arrivalLocation": "top",
-      "arrivalFlip": "faceUp"
-    },
-    {
-      "name": "Foundation 4",
-      "location": { "x": 285, "y": 20 },
-      "arrangement": { "spreadX": 0.2, "spreadY": 0.2 },
-      "defaultFlip": "faceUp",
-      "arrivalLocation": "top",
-      "arrivalFlip": "faceUp"
     }
+  ],
+  "globalGroups": [
+    { "name": "Stock & Waste", "direction": "row", "places": ["Stock", "Waste"] },
+    { "name": "Foundations", "direction": "row", "places": ["Foundation 1", "Foundation 2", "Foundation 3", "Foundation 4"] },
+    { "name": "Tableau", "direction": "row", "places": ["Tableau 1", "Tableau 2", "Tableau 3", "Tableau 4", "Tableau 5", "Tableau 6", "Tableau 7"] }
   ]
 }

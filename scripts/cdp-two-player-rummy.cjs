@@ -70,11 +70,11 @@ async function runGame(wsUrls) {
     // --- HOST: Navigate and create session ---
     console.log(`[${NAMES[0]}] Navigating to app...`);
     await host.evaluate(`window.location.href = '${BASE}'`);
-    await host.evaluate(`await new Promise(r => setTimeout(r, 1500))`);
+    await host.evaluate(`await new Promise(r => setTimeout(r, 500))`);
 
     console.log(`[${NAMES[0]}] Clicking Host Game...`);
     await host.evaluate(`[...document.querySelectorAll('button')].find(b => b.textContent.includes('Host')).click()`);
-    await host.evaluate(`await new Promise(r => setTimeout(r, 300))`);
+    await host.evaluate(`await new Promise(r => setTimeout(r, 100))`);
 
     console.log(`[${NAMES[0]}] Filling form...`);
     await host.evaluate(`
@@ -86,7 +86,7 @@ async function runGame(wsUrls) {
 
     console.log(`[${NAMES[0]}] Creating session...`);
     await host.evaluate(`[...document.querySelectorAll('button')].find(b => b.textContent.includes('Create')).click()`);
-    await host.evaluate(`await new Promise(r => setTimeout(r, 2000))`);
+    await host.evaluate(`await new Promise(r => setTimeout(r, 1000))`);
 
     // Check for errors
     const hostUi = await host.evaluate(`return document.querySelector('#ui')?.innerText?.substring(0, 300)`);
@@ -106,26 +106,26 @@ async function runGame(wsUrls) {
 
       console.log(`[${name}] Joining via session link...`);
       await guest.evaluate(`window.location.href = '${sessionUrl}'`);
-      await guest.evaluate(`await new Promise(r => setTimeout(r, 2000))`);
+      await guest.evaluate(`await new Promise(r => setTimeout(r, 800))`);
 
       console.log(`[${name}] Filling name...`);
       await guest.evaluate(`
         const n = document.querySelector('#player-name');
         if (n) { n.value = '${name}'; n.dispatchEvent(new Event('input', {bubbles:true})); }
       `);
-      await guest.evaluate(`await new Promise(r => setTimeout(r, 300))`);
+      await guest.evaluate(`await new Promise(r => setTimeout(r, 100))`);
 
       console.log(`[${name}] Clicking Join...`);
       await guest.evaluate(`
         const btn = [...document.querySelectorAll('button')].find(b => b.textContent.includes('Join'));
         if (btn) btn.click();
       `);
-      await guest.evaluate(`await new Promise(r => setTimeout(r, 2000))`);
+      await guest.evaluate(`await new Promise(r => setTimeout(r, 800))`);
     }
 
     // --- HOST: Wait for all guests, then start ---
     console.log(`[${NAMES[0]}] Waiting for players...`);
-    await host.evaluate(`await new Promise(r => setTimeout(r, 1000))`);
+    await host.evaluate(`await new Promise(r => setTimeout(r, 500))`);
 
     const players = await host.evaluate(`return document.querySelector('.players')?.innerText || ''`);
     console.log(`[${NAMES[0]}] Players:`, players.replace(/\n/g, ', '));
@@ -135,7 +135,7 @@ async function runGame(wsUrls) {
       const btn = [...document.querySelectorAll('button')].find(b => b.textContent.includes('Start'));
       if (btn && !btn.disabled) btn.click();
     `);
-    await host.evaluate(`await new Promise(r => setTimeout(r, 1000))`);
+    await host.evaluate(`await new Promise(r => setTimeout(r, 500))`);
 
     // --- Report results from all tabs ---
     for (let i = 0; i < connections.length; i++) {

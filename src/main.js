@@ -20,6 +20,8 @@ let playerViews = new Map(); // peerId -> last serialized view
 let localView = null; // Serialized view for local display
 let boardLayout = null;
 let interaction = null;
+let gameSetup = null; // Raw setup JSON (for layout groups)
+let playerNames = new Map(); // peerId -> display name
 
 // --- Host action handler ---
 
@@ -119,11 +121,9 @@ function updateLocalView() {
   if (!gameState || !isHost) return;
   const view = computePlayerView(gameState, localPlayerId, deck);
   localView = serializeView(view, gameState.version);
-  // Attach configs for rendering
-  for (const [id, place] of gameState.places) {
-    if (localView.places[id]) {
-      localView.places[id].config = place.config;
-    }
+  // Attach setup reference for layout
+  for (const place of Object.values(localView.places)) {
+    if (place.config) place.config._setup = gameSetup;
   }
 }
 
@@ -133,6 +133,7 @@ function startGame(net, sessionState, initData) {
   network = net;
   isHost = initData.isHost ?? false;
   allPlayerIds = initData.players.map(p => p.peerId);
+  playerNames = new Map(initData.players.map(p => [p.peerId, p.name]));
 
   if (isHost) {
     deck = initData.deck;
@@ -142,16 +143,15 @@ function startGame(net, sessionState, initData) {
       cards: deck.cards.map(c => ({ face: c.face, back: c.back, tags: c.tags })),
     };
     localPlayerId = 'host';
+    gameSetup = initData.setup;
     gameState = createGameState(initData.setup, deck, allPlayerIds);
 
     for (const peerId of allPlayerIds) {
       if (peerId === 'host') continue;
       const view = computePlayerView(gameState, peerId, deck);
       const serialized = serializeView(view, gameState.version);
-      for (const [id, place] of gameState.places) {
-        if (serialized.places[id]) {
-          serialized.places[id].config = place.config;
-        }
+      for (const place of Object.values(serialized.places)) {
+        if (place.config) place.config._setup = gameSetup;
       }
       network.sendToPlayer(peerId, { type: 'state', ...serialized });
       playerViews.set(peerId, serialized);
@@ -162,6 +162,8 @@ function startGame(net, sessionState, initData) {
     localPlayerId = net.getLocalId();
     deckInfo = initData.deckMeta || null;
     localView = { places: {}, version: 0 };
+    // Store setup for layout (guests receive it from host via initData)
+    gameSetup = initData.setup || null;
   }
 
   initBoard();
@@ -170,12 +172,26 @@ function startGame(net, sessionState, initData) {
 
 function onFullState(data) {
   localView = { places: data.places, version: data.version };
+  // Attach setup reference for layout
+  if (gameSetup) {
+    for (const place of Object.values(localView.places)) {
+      if (place.config) place.config._setup = gameSetup;
+      else place.config = { _setup: gameSetup };
+    }
+  }
   renderGame();
 }
 
 function onDelta(data) {
   if (localView) {
     localView = applyViewDelta(localView, data);
+    // Ensure setup reference persists
+    if (gameSetup) {
+      for (const place of Object.values(localView.places)) {
+        if (place.config) place.config._setup = gameSetup;
+        else place.config = { _setup: gameSetup };
+      }
+    }
   }
   renderGame();
 }
@@ -251,7 +267,7 @@ function renderOverview() {
     }
   }
 
-  renderBoard(boardLayout, filteredView, localPlayerId, allPlayerIds, deckInfo, {
+  renderBoard(boardLayout, filteredView, localPlayerId, allPlayerIds, deckInfo, playerNames, {
     onPlaceTap: () => {}, // No action on place tap in overview
     onCardTap: (cardId, placeId) => interaction.onCardTap(cardId, placeId),
     onPlaceLongPress: (placeId) => interaction.onPlaceLongPress(placeId),
@@ -436,7 +452,7 @@ function getCardBack(card) {
 // Prevent context menu on game board (allows long-press gestures)
 game.addEventListener('contextmenu', (e) => e.preventDefault());
 
-createNavigation(ui, game, {
+const navigation = createNavigation(ui, game, {
   start: startGame,
   onAction: handleAction,
   onFullState,

@@ -93,6 +93,7 @@ export function serializeView(view, version) {
   for (const [id, placeView] of view) {
     places[id] = {
       cards: placeView.cards,
+      config: placeView.config,
     };
   }
   return { places, version };

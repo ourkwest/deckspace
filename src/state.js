@@ -167,10 +167,25 @@ export function moveCards(state, cardIds, fromPlaceId, toPlaceId, position = 'to
     }
   }
 
-  // Same for source if it uses topFaceUp
-  if (from.config.defaultFlip === 'topFaceUp' && from.cards.length > 0) {
+  // Apply topFaceUp to source — but NOT if destination is a hand (pickup in progress).
+  // The source will resolve topFaceUp when cards are deposited elsewhere.
+  const isPickup = toPlaceId.startsWith('__hand__');
+  if (!isPickup && from.config.defaultFlip === 'topFaceUp' && from.cards.length > 0) {
     for (let i = 0; i < from.cards.length; i++) {
       from.cards[i].faceUp = (i === from.cards.length - 1);
+    }
+  }
+
+  // When depositing from hand, resolve topFaceUp on all places that may have
+  // been waiting (their top card was picked up but not yet revealed)
+  const isDeposit = fromPlaceId.startsWith('__hand__');
+  if (isDeposit && state) {
+    for (const [, place] of state.places) {
+      if (place.config.defaultFlip === 'topFaceUp' && place.cards.length > 0 && !place.id.startsWith('__hand__')) {
+        for (let i = 0; i < place.cards.length; i++) {
+          place.cards[i].faceUp = (i === place.cards.length - 1);
+        }
+      }
     }
   }
 

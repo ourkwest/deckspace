@@ -8,7 +8,6 @@
   "globalPlaces": [
     {
       "name": "Draw Pile",
-      "location": { "x": 40, "y": 50 },
       "arrangement": { "spreadX": 0.1, "spreadY": 0.1 },
       "defaultFlip": "faceDown",
       "startingSet": "full",
@@ -17,29 +16,33 @@
     },
     {
       "name": "Discard Pile",
-      "location": { "x": 60, "y": 50 },
       "arrangement": { "spreadX": 0, "spreadY": 3 },
       "defaultFlip": "topFaceUp",
       "arrivalLocation": "top",
       "arrivalFlip": "faceUp"
     }
   ],
+  "globalGroups": [
+    { "name": "Table", "direction": "row", "places": ["Draw Pile", "Discard Pile"] }
+  ],
   "playerPlaces": [
     {
       "name": "Hand",
-      "location": { "x": 50, "y": 80 },
       "arrangement": { "spreadX": 12, "spreadY": 0 },
       "defaultFlip": "faceUp",
       "visibleToOtherPlayers": false
     },
     {
       "name": "Melds",
-      "location": { "x": 50, "y": 40 },
       "arrangement": { "spreadX": 15, "spreadY": 0 },
       "defaultFlip": "faceUp",
       "visibleToOtherPlayers": true,
       "othersCanMoveIn": true,
       "othersCanMoveOut": false
     }
+  ],
+  "playerGroups": [
+    { "name": "Hand", "direction": "row", "places": ["Hand"] },
+    { "name": "Melds", "direction": "row", "places": ["Melds"] }
   ]
 }
