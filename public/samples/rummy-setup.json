@@ -8,7 +8,7 @@
   "globalPlaces": [
     {
       "name": "Draw Pile",
-      "location": { "x": 80, "y": 50 },
+      "location": { "x": 40, "y": 50 },
       "arrangement": { "spreadX": 0.1, "spreadY": 0.1 },
       "defaultFlip": "faceDown",
       "startingSet": "full",
@@ -17,7 +17,7 @@
     },
     {
       "name": "Discard Pile",
-      "location": { "x": 120, "y": 50 },
+      "location": { "x": 60, "y": 50 },
       "arrangement": { "spreadX": 0, "spreadY": 3 },
       "defaultFlip": "topFaceUp",
       "arrivalLocation": "top",

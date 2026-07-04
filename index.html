@@ -8,7 +8,7 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0a1a; font-family: system-ui, sans-serif; color: #e0e0e0; touch-action: manipulation; }
     #ui { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
-    #game { display: none; width: 100%; height: 100%; position: absolute; top: 0; left: 0; overflow: hidden; }
+    #game { display: none; width: 100%; height: 100%; position: absolute; top: 0; left: 0; overflow: hidden; -webkit-touch-callout: none; }
     .screen { max-width: 400px; width: 90%; display: flex; flex-direction: column; gap: 16px; padding: 32px; }
     .splash { align-items: center; text-align: center; }
     .title { font-size: 2.5rem; letter-spacing: 0.15em; color: #4fc3f7; text-shadow: 0 0 20px rgba(79,195,247,0.4); }
@@ -78,7 +78,7 @@
     .board-table .place-empty, .board-player .place-empty { width: calc(50px * var(--card-scale)); height: calc(70px * var(--card-scale)); }
 
     /* Place labels in overview */
-    .place-label { position: absolute; top: -16px; left: 50%; transform: translateX(-50%); font-size: 0.65rem; color: #6a9a6a; white-space: nowrap; pointer-events: none; opacity: 0.85; }
+    .place-label { position: absolute; bottom: -16px; left: 50%; transform: translateX(-50%); font-size: 0.65rem; color: #6a9a6a; white-space: nowrap; pointer-events: none; opacity: 0.85; }
 
     /* Ask prompt dialog */
     .ask-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; }
@@ -97,16 +97,15 @@
     .dest-place-btn .dest-count { color: #666; font-size: 0.7rem; }
 
     /* Hand strip */
-    .hand-strip { position: fixed; bottom: 0; left: 0; right: 0; height: 80px; background: rgba(10,10,26,0.95); border-top: 2px solid #4fc3f7; z-index: 100; display: none; align-items: center; padding: 8px 0; }
-    .hand-strip.visible { display: flex; }
+    .hand-strip { position: fixed; bottom: 0; left: 0; right: 0; height: 80px; background: rgba(10,10,26,0.95); border-top: 2px solid #333; z-index: 100; display: flex; align-items: center; padding: 8px 0; }
+    .hand-strip.visible { border-top-color: #4fc3f7; }
     .hand-strip .hand-card { position: absolute; width: 50px; height: 70px; bottom: 5px; transition: transform 0.1s; }
     .hand-strip .hand-card:hover { transform: translateY(-4px); }
     .hand-cancel { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; border-radius: 50%; background: #333; border: 1px solid #555; color: #4fc3f7; font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 1; }
     .hand-cancel:hover { background: #444; }
 
-    /* Board with hand visible — shrink board area */
-    .board:has(.hand-strip.visible) .board-table,
-    .board:has(.hand-strip.visible) .board-player { margin-bottom: 80px; }
+    /* Board shrinks to account for hand strip */
+    .board { padding-bottom: 80px; }
 
     /* Inspect overlay */
     .inspect-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; cursor: pointer; }

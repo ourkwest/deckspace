@@ -13,7 +13,7 @@ export function createNavigation(uiContainer, gameContainer, onGameStart) {
   let currentScreen = 'splash';
   let state = {
     name: '',
-    setupUrl: '',
+    setupUrl: 'https://ourkwest.github.io/deckspace/samples/rummy-setup.json',
     adj1: '', adj2: '', animal: '',
     error: '',
   };

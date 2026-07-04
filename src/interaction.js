@@ -3,8 +3,7 @@
 
 /**
  * @typedef {Object} InteractionState
- * @property {Array<{id: string, deckIndex: number, faceUp: boolean}>} hand - Cards currently held
- * @property {string|null} handSource - Place ID where hand cards came from (for cancel)
+ * @property {Array<{id: string, deckIndex: number, faceUp: boolean, source: string}>} hand - Cards currently held
  * @property {string|null} inspecting - Card ID being inspected fullscreen
  */
 
@@ -22,9 +21,9 @@ const LONG_PRESS_MS = 500;
  */
 export function createInteraction(callbacks) {
   const state = {
-    hand: [],
-    handSource: null,
+    hand: [],       // { id, deckIndex, faceUp, source }
     inspecting: null,
+    depositCooldown: false,
   };
 
   function getState() { return state; }
@@ -33,6 +32,9 @@ export function createInteraction(callbacks) {
    * Pick up a card (and all cards above it) from a place into the hand.
    */
   function onCardTap(cardId, placeId) {
+    // Ignore taps briefly after a deposit to prevent accidental pick-up
+    if (state.depositCooldown) return;
+
     // If inspecting, exit inspection
     if (state.inspecting) {
       state.inspecting = null;
@@ -41,23 +43,19 @@ export function createInteraction(callbacks) {
     }
 
     // If tapping a card in the hand, flip it
-    const handIdx = state.hand.findIndex(c => c.id === cardId);
-    if (handIdx !== -1) {
-      // Flip this card locally in hand
-      state.hand[handIdx].faceUp = !state.hand[handIdx].faceUp;
-      // Also send flip action to host
-      callbacks.sendAction({
-        type: 'flip',
-        cardIds: [cardId],
-        placeId: '__hand__',
-        faceUp: state.hand[handIdx].faceUp,
-      });
-      callbacks.rerender();
-      return;
-    }
-
-    // Don't pick up more cards if hand already has cards from a different place
-    if (state.hand.length > 0 && state.handSource !== placeId) {
+    if (placeId === '__hand__') {
+      const handIdx = state.hand.findIndex(c => c.id === cardId);
+      if (handIdx !== -1) {
+        state.hand[handIdx].faceUp = !state.hand[handIdx].faceUp;
+        // Send flip action to host
+        callbacks.sendAction({
+          type: 'flip',
+          cardIds: [cardId],
+          placeId: '__hand__',
+          faceUp: state.hand[handIdx].faceUp,
+        });
+        callbacks.rerender();
+      }
       return;
     }
 
@@ -72,9 +70,8 @@ export function createInteraction(callbacks) {
     // Cards above = from cardIndex to end (index 0 = bottom, so "above" = higher index)
     const pickedCards = place.cards.slice(cardIndex);
 
-    // Add to hand
-    state.hand.push(...pickedCards.map(c => ({ ...c })));
-    state.handSource = placeId;
+    // Add to hand with source tracking
+    state.hand.push(...pickedCards.map(c => ({ ...c, source: placeId })));
 
     // Send pick-up action to host (move cards to a virtual hand place)
     callbacks.sendAction({
@@ -134,28 +131,41 @@ export function createInteraction(callbacks) {
       flip,
     });
 
-    // Clear hand
+    // Clear hand and set cooldown
     state.hand = [];
-    state.handSource = null;
+    state.depositCooldown = true;
+    setTimeout(() => { state.depositCooldown = false; }, 400);
     callbacks.rerender();
   }
 
   /**
-   * Cancel — return all hand cards to source.
+   * Cancel — return all hand cards to their respective sources.
    */
   function cancel() {
     if (state.hand.length === 0) return;
 
-    callbacks.sendAction({
-      type: 'deposit',
-      cardIds: state.hand.map(c => c.id),
-      to: state.handSource,
-      position: 'top',
-      flip: 'asIs',
-    });
+    // Group cards by source
+    const bySource = new Map();
+    for (const card of state.hand) {
+      const source = card.source || '__unknown__';
+      if (!bySource.has(source)) bySource.set(source, []);
+      bySource.get(source).push(card.id);
+    }
+
+    // Send deposit for each group
+    for (const [source, cardIds] of bySource) {
+      callbacks.sendAction({
+        type: 'deposit',
+        cardIds,
+        to: source,
+        position: 'top',
+        flip: 'asIs',
+      });
+    }
 
     state.hand = [];
-    state.handSource = null;
+    state.depositCooldown = true;
+    setTimeout(() => { state.depositCooldown = false; }, 400);
     callbacks.rerender();
   }
 

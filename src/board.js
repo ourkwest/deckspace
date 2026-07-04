@@ -226,6 +226,7 @@ function renderPlace(place, deckInfo, seatRotation, callbacks, cardScale = 1) {
 
   if (rotation !== 0) {
     el.style.transform = `rotate(${rotation}deg)`;
+    el.dataset.rotation = rotation;
   }
 
   // Render cards
@@ -243,10 +244,13 @@ function renderPlace(place, deckInfo, seatRotation, callbacks, cardScale = 1) {
     el.appendChild(empty);
   }
 
-  // Place label — always visible in overview
+  // Place label — always visible in overview, counter-rotated to stay readable
   const label = document.createElement('div');
   label.className = 'place-label';
   label.textContent = place.id.split(':').pop();
+  if (rotation !== 0) {
+    label.style.transform = `rotate(${-rotation}deg)`;
+  }
   el.appendChild(label);
 
   // Tap handler for place (no-op in new UX, but kept for flexibility)
@@ -260,7 +264,6 @@ function renderPlace(place, deckInfo, seatRotation, callbacks, cardScale = 1) {
     let lpTimer = null;
     let lpTriggered = false;
     el.addEventListener('pointerdown', (e) => {
-      if (e.target.closest('.card')) return;
       lpTriggered = false;
       lpTimer = setTimeout(() => {
         lpTriggered = true;
@@ -269,6 +272,7 @@ function renderPlace(place, deckInfo, seatRotation, callbacks, cardScale = 1) {
     });
     el.addEventListener('pointerup', () => { clearTimeout(lpTimer); });
     el.addEventListener('pointerleave', () => { clearTimeout(lpTimer); });
+    el.addEventListener('contextmenu', (e) => { e.preventDefault(); });
     el.addEventListener('click', (e) => {
       if (lpTriggered) { e.preventDefault(); e.stopPropagation(); lpTriggered = false; }
     }, true);
@@ -294,6 +298,9 @@ function renderCard(card, index, total, arrangement, deckInfo, callbacks, cardSc
   if (offsetX || offsetY) transform += `translate(${offsetX}px, ${offsetY}px)`;
   if (offsetAngle) transform += ` rotate(${offsetAngle}deg)`;
   if (transform) el.style.transform = transform;
+
+  // Higher index = on top of the stack
+  el.style.zIndex = index;
 
   // Card image
   if (card.faceUp && card.deckIndex !== null) {

@@ -262,32 +262,43 @@ function renderHandStrip(interactionState) {
   let strip = game.querySelector('.hand-strip');
   if (!strip) {
     strip = document.createElement('div');
-    strip.className = 'hand-strip';
+    strip.className = 'hand-strip visible';
     game.appendChild(strip);
-  }
-
-  if (interactionState.hand.length === 0) {
-    strip.classList.remove('visible');
-    strip.innerHTML = '';
-    return;
   }
 
   strip.classList.add('visible');
   strip.innerHTML = '';
 
-  // Cancel button
-  const cancelBtn = document.createElement('button');
-  cancelBtn.className = 'hand-cancel';
-  cancelBtn.textContent = '↩';
-  cancelBtn.title = 'Return cards';
-  cancelBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    interaction.cancel();
-  });
-  strip.appendChild(cancelBtn);
+  // Sync hand card data from server state (gets deckIndex after flip reveals card)
+  const handPlaceId = `__hand__:${localPlayerId}`;
+  const serverHand = localView?.places?.[handPlaceId]?.cards;
+  if (serverHand) {
+    for (const handCard of interactionState.hand) {
+      const serverCard = serverHand.find(c => c.id === handCard.id);
+      if (serverCard) {
+        handCard.deckIndex = serverCard.deckIndex;
+        handCard.faceUp = serverCard.faceUp;
+      }
+    }
+  }
+
+  // Cancel button — only show when hand has cards
+  if (interactionState.hand.length > 0) {
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'hand-cancel';
+    cancelBtn.textContent = '↩';
+    cancelBtn.title = 'Return cards';
+    cancelBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      interaction.cancel();
+    });
+    strip.appendChild(cancelBtn);
+  }
 
   // Render hand cards fanned out
   const cards = interactionState.hand;
+  if (cards.length === 0) return;
+
   const maxWidth = strip.clientWidth - 60; // leave room for cancel button
   const cardWidth = 50; // base card width at scale
   const spacing = Math.min(cardWidth * 0.8, maxWidth / Math.max(cards.length, 1));
@@ -421,6 +432,9 @@ function getCardBack(card) {
 }
 
 // --- Bootstrap ---
+
+// Prevent context menu on game board (allows long-press gestures)
+game.addEventListener('contextmenu', (e) => e.preventDefault());
 
 createNavigation(ui, game, {
   start: startGame,

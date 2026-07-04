@@ -127,3 +127,14 @@ If a destination place has `arrivalLocation: "ask"` or `arrivalFlip: "ask"`, the
 - Rotation/flip states (e.g. tapped cards in MTG): more than just faceUp/faceDown
 - Splitting the hand: returning only some cards (for now, cancel returns all)
 
+## note
+1. Should flips be resolved in places (e.g. top card face up in a pile) only after your hand is empty? Discuss
+3. We might need to rethink the layout logic. This should be a discussion.
+   - For layout, places should include their labels, so we layout a container with both the place and the label to ensure the label is visible.
+   - Color coding places that belong to other players would be good (perhaps an additional, thicker, colored border), rather than rotating them I think - that simplifies layout.
+   - I'm not sure if the 'setup' specifying the layout is good? If it is, we aren't fully respecting it, the layout is different on different sized screens.
+     - Perhaps most places won't specify a location at all, and the app can lay them out in a more natural webpage-like way, this allows us to minimise the unused space on screen (important on mobile). 
+     - Perhaps a few places should specify e.g. "I want to be abutting the left edge of place 'x'", so that games that care about placement can specify it.
+       - In general though, the places in card games are significant for their role, not their location? (challenge this if you think it is wrong!)
+     - I don't know if we can get away from needing to dynamically size the game view - in some games the tableau is a fixed number of places, in others (e.g. 'Arboretum') the tableau is dynamic and we should maybe support recursive subplaces so that users can build up ever expanding tableaus.
+     - If we require dynamic sizing (we might also need/want it for offset stacks that grow large) should there be some sort of zoom feature? A well spread game might require each card/place to be rendered quite small to fit is all on a mobile screen.
